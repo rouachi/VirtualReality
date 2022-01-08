@@ -5,7 +5,7 @@
 </head>
 
 <body>
-    <h1>Implement a refractive object</h1>
+    <h1>Project: Rym Ouachi & Margaux Mannaerts</h1>
     <canvas id="webgl_canvas" width="1400" height="800"></canvas>
     <div id="fps"></div>
     <div id="camera_mat"></div>
@@ -124,12 +124,10 @@
       uniform mat4 P;
 
       void main() {
-        //3) _______________________________Shader code for the object__________________
         vec4 frag_coord = M*vec4(position, 1.0);
         gl_Position = (P*V*frag_coord);
         v_normal = vec3(itM * vec4(normal, 1.0));
         v_frag_coord = frag_coord.xyz;
-        //_____________________________code end___________________________________
       }
     `;
 
@@ -164,7 +162,6 @@
       uniform mat4 P;
 
       void main() {
-        // _________2) Shader code________
         vec4 frag_coord = M*vec4(position, 1.0);
         gl_Position = P*V*frag_coord;
         
@@ -172,8 +169,6 @@
         v_normal = vec3(itM * vec4(normal, 1.0));
         
         v_frag_coord = frag_coord.xyz;
-
-        //________________________________
       }
     `;
 
@@ -187,7 +182,6 @@
       uniform vec3 u_view_dir;
 
       void main() {
-        // __________________2) Shader code_______________
         vec3 normal = normalize(v_normal);
         
         // light color
@@ -218,8 +212,6 @@
         //vec3 color = (ambient + specular + diffusion) * light_color;
         vec3 color = (ambient + specular + diffusion) * light_color + (ambient + specular2 + diffusion2) * light_color2;
         gl_FragColor = vec4(color, 1.0);
-
-        //________________________________________________________
       }
     `;
 
