@@ -126,7 +126,7 @@
 
       void main() {
         vec4 frag_coord = M*vec4(position, 1.0);
-        gl_Position = (P*V*frag_coord);
+        gl_Position = (P*M*frag_coord);
         v_normal = vec3(itM * vec4(normal, 1.0));
         v_frag_coord = frag_coord.xyz;
       }
@@ -341,7 +341,7 @@
             //*/
             obj_mesh2.model = glMatrix.mat4.translate(obj_mesh2.model,
                                                         obj_mesh2.model,
-                                                        glMatrix.vec3.fromValues(-0.5, 0.0, 1.0));
+                                                        glMatrix.vec3.fromValues(-7.0, 0.0, 1.0));
             
             obj_mesh2.model = glMatrix.mat4.rotate(obj_mesh2.model, obj_mesh2.model, 
                                                         180, 
@@ -411,7 +411,7 @@
 
             //*/
             //Retrieve adress of bump map textures
-            var texBrick = make_texture_cubemap(gl, '../textures/brickwall.jpg');
+            var texBrick = make_texture(gl, '../textures/brickwall.jpg');
             const u_brick = gl.getUniformLocation(shader_bumpmap.program, 'u_brick');
 
             /*/
@@ -494,9 +494,9 @@
                 obj_mesh2.draw();
                 gl.uniform3fv(u_view_dir_ref, camera.get_position());
 
-                obj_mesh2.model = glMatrix.mat4.rotate(obj_mesh2.model, obj_mesh2.model, 
-                                                        deltaTime % 180, 
-                                                        glMatrix.vec3.fromValues(1.0, 1.0, 0.0));
+                //obj_mesh2.model = glMatrix.mat4.rotate(obj_mesh2.model, obj_mesh2.model, 
+                //                                        deltaTime % 180, 
+                //                                        glMatrix.vec3.fromValues(1.0, 1.0, 0.0));
                 
                 /*/
                 //second sphere with the same shader
@@ -549,9 +549,6 @@
                 gl.uniformMatrix4fv(u_itM_light, false, itM);
                 sphere2_mesh.draw();
 
-                sphere2_mesh.model = glMatrix.mat4.translate(sphere2_mesh.model, sphere2_mesh.model, 
-                                                        glMatrix.vec3.fromValues(1.0, 0.0, 0.0));
-
                 /*
                 ground_mesh.activate(shader_light);
                 gl.uniformMatrix4fv(unif['model'], false, ground_mesh.model);
@@ -599,8 +596,8 @@
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, texBrick);
                 gl.uniform1i(u_brick, 0);
-                //*/
 
+                /*
                 ground_mesh.activate(shader_bumpmap);
                 gl.uniformMatrix4fv(unif4['model'], false, ground_mesh.model);
                 var itM = glMatrix.mat4.create();
