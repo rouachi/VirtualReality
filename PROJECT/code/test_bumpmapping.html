@@ -16,6 +16,7 @@
     <script language="javascript" type="text/javascript" src="../shaders.js"></script>
     <script language="javascript" type="text/javascript" src="textures_08.js"></script>
     <script language="javascript" type="text/javascript" src="objects_02.js"></script>
+    <script data-main="cloth_simulation.js" type="text/javascript" src="../../dependencies/require.js"></script>
     <script>
         async function main() {
             // Boilerplate code
@@ -332,7 +333,7 @@
             var obj_mesh = await make_object(gl, obj)
             obj_mesh.model = glMatrix.mat4.translate(obj_mesh.model,
                                                         obj_mesh.model,
-                                                        glMatrix.vec3.fromValues(-0.5, 0.0, 1.0));
+                                                        glMatrix.vec3.fromValues(-7.0, 0.0, 1.0));
             
             //Bunny
             var obj2 = await load_obj('../objects/bunny_small.obj');
@@ -340,7 +341,7 @@
             //*/
             obj_mesh2.model = glMatrix.mat4.translate(obj_mesh2.model,
                                                         obj_mesh2.model,
-                                                        glMatrix.vec3.fromValues(-7.0, 0.0, 1.0));
+                                                        glMatrix.vec3.fromValues(-0.5, 0.0, 1.0));
             
             obj_mesh2.model = glMatrix.mat4.rotate(obj_mesh2.model, obj_mesh2.model, 
                                                         180, 
@@ -360,9 +361,9 @@
             //Sphere2
             //var obj3 = await load_obj('../objects/sphere_smooth.obj');
             var sphere2_mesh = await make_object(gl,obj)                                    
-            sphere2_mesh.model = glMatrix.mat4.translate(sphere2_mesh.model,
-                                                        sphere2_mesh.model,
-                                                        glMatrix.vec3.fromValues(-3.0, 0.0, 1.0));
+            //sphere2_mesh.model = glMatrix.mat4.translate(sphere2_mesh.model,
+            //                                            sphere2_mesh.model,
+             //                                           glMatrix.vec3.fromValues(-3.0, 0.0, 1.0));
 
             //Wall                                            
             var obj4 = await load_obj('../objects/wall.obj');
@@ -431,9 +432,18 @@
             const u_view_dir_bump = gl.getUniformLocation(shader_bumpmap.program, 'u_view_dir');
 
             var deltaTime = 0;
+            var positionX;
+            var moveSpeed = 5;
+            let then = 0;
 
             function animate(time) {
                 deltaTime += 0.005;
+                //TEST
+                dT = deltaTime - then;
+                then = deltaTime;
+                positionX += moveSpeed*dT;
+
+
                 camera.update(deltaTime);
                 //Draw loop
                 gl.clearColor(0.2, 0.2, 0.2, 1);
@@ -483,6 +493,11 @@
                 gl.uniformMatrix4fv(u_itM_ref, false, itM);
                 obj_mesh2.draw();
                 gl.uniform3fv(u_view_dir_ref, camera.get_position());
+
+                obj_mesh2.model = glMatrix.mat4.rotate(obj_mesh2.model, obj_mesh2.model, 
+                                                        deltaTime % 180, 
+                                                        glMatrix.vec3.fromValues(1.0, 1.0, 0.0));
+                
                 /*/
                 //second sphere with the same shader
                 sphere2_mesh.activate(shader_reflect);
@@ -533,6 +548,9 @@
                 itM = glMatrix.mat4.transpose(itM, itM);
                 gl.uniformMatrix4fv(u_itM_light, false, itM);
                 sphere2_mesh.draw();
+
+                sphere2_mesh.model = glMatrix.mat4.translate(sphere2_mesh.model, sphere2_mesh.model, 
+                                                        glMatrix.vec3.fromValues(1.0, 0.0, 0.0));
 
                 /*
                 ground_mesh.activate(shader_light);
