@@ -1,0 +1,13 @@
+# Blender MTL File: 'None'
+# Material Count: 1
+
+newmtl 10477_Satellite_v1
+Ns 30.000009
+Ka 1.000000 1.000000 1.000000
+Kd 0.588200 0.588200 0.588200
+Ks 0.675000 0.675000 0.675000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd /Users/chocochocolatte/Downloads/Satellite_v1_L3.123c24489c18-f4e2-42f2-abc7-9a6d4abbeae2/10477_Satellite_v1_Diffuse.jpg
