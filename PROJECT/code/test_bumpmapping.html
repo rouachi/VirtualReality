@@ -16,7 +16,7 @@
     <script language="javascript" type="text/javascript" src="../shaders.js"></script>
     <script language="javascript" type="text/javascript" src="textures_08.js"></script>
     <script language="javascript" type="text/javascript" src="objects_02.js"></script>
-    <script data-main="cloth_simulation.js" type="text/javascript" src="../../dependencies/require.js"></script>
+    
     <script>
         async function main() {
             // Boilerplate code
@@ -126,7 +126,7 @@
 
       void main() {
         vec4 frag_coord = M*vec4(position, 1.0);
-        gl_Position = (P*M*frag_coord);
+        gl_Position = (P*V*frag_coord);
         v_normal = vec3(itM * vec4(normal, 1.0));
         v_frag_coord = frag_coord.xyz;
       }
@@ -314,7 +314,38 @@
 
       }
       `;
+//*
+      const source_texture_V = `
+		  attribute vec3 position;
+		  attribute vec2 texcoord;
+		  varying vec4 v_texcoord;
+		  
+		  uniform mat4 M;
+      uniform mat4 itM;  // inverse transpose model!
+		  uniform mat4 V;
+		  uniform mat4 P;
 
+		  void main() {
+
+
+			gl_Position = P*M*V*vec4(position, 1);
+			v_texcoord = vec4(position,1);
+		  }
+		`;
+		
+		const source_texture_F = `
+		  precision mediump float;
+		  varying vec4 v_texcoord;
+		  
+		  uniform sampler2D u_texture;
+
+		  void main() {
+        vec2 longitudeLatitude = vec2((atan(v_texcoord.y, v_texcoord.x) / 3.1415926 + 1.0) * 0.5,
+                                  (asin(v_texcoord.z) / 3.1415926 + 0.5));
+			  gl_FragColor = texture2D(u_texture, longitudeLatitude);
+		  }
+		`;
+//*/
 
             //------MAKING THE SHADERS------
             var shader_cubemap = make_shader(gl, source_cubemap_V, source_cubemap_F);
@@ -323,6 +354,7 @@
             var shader_reflect = make_shader(gl, source_reflect_V, source_reflect_F); //shader for second object
             var shader_light = make_shader(gl, sourceV, sourceF);
             var shader_bumpmap = make_shader(gl, source_bumpmap_V, source_bumpmap_F);
+            var shader_texture = make_shader(gl, source_texture_V, source_texture_F);
             
             //------LOADING, MAKING AND MOVING THE OBJECTS------
             var cube = await load_obj('../objects/cube.obj');
@@ -341,7 +373,7 @@
             //*/
             obj_mesh2.model = glMatrix.mat4.translate(obj_mesh2.model,
                                                         obj_mesh2.model,
-                                                        glMatrix.vec3.fromValues(-7.0, 0.0, 1.0));
+                                                        glMatrix.vec3.fromValues(3.0, 0.0, 1.0));
             
             obj_mesh2.model = glMatrix.mat4.rotate(obj_mesh2.model, obj_mesh2.model, 
                                                         180, 
@@ -360,10 +392,10 @@
 
             //Sphere2
             //var obj3 = await load_obj('../objects/sphere_smooth.obj');
-            var sphere2_mesh = await make_object(gl,obj)                                    
-            //sphere2_mesh.model = glMatrix.mat4.translate(sphere2_mesh.model,
-            //                                            sphere2_mesh.model,
-             //                                           glMatrix.vec3.fromValues(-3.0, 0.0, 1.0));
+            var sphere2_mesh = await make_object(gl,obj);                                    
+            sphere2_mesh.model = glMatrix.mat4.translate(sphere2_mesh.model,
+                                                        sphere2_mesh.model,
+                                                        glMatrix.vec3.fromValues(-3.0, 0.0, 1.0));
 
             //Wall                                            
             var obj4 = await load_obj('../objects/wall.obj');
@@ -379,8 +411,22 @@
                                                         ground_mesh.model,
                                                         glMatrix.vec3.fromValues(-2.0, -1.0, 1.0));
             ground_mesh.model = glMatrix.mat4.scale(ground_mesh.model, ground_mesh.model, 
-                                                        glMatrix.vec3.fromValues(10., 10., 10.));                                        
-            
+                                                        glMatrix.vec3.fromValues(10., 10., 10.));     
+                                                        
+            //SPACESHIP
+            var spaceship = await load_obj('../objects/spaceship.obj');
+            var spaceship_mesh = await make_object(gl, spaceship);
+            spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
+                                                            spaceship_mesh.model,
+                                                        glMatrix.vec3.fromValues(0.0, -1.0, 7.0));                                            
+             spaceship_mesh.model = glMatrix.mat4.scale(spaceship_mesh.model, spaceship_mesh.model, 
+                                                        glMatrix.vec3.fromValues(0.01, 0.01, 0.01));  
+
+            //Sphere3
+            var sphere3_mesh = await make_object(gl,obj);
+            sphere3_mesh.model = glMatrix.mat4.translate(sphere3_mesh.model,
+                                                        sphere3_mesh.model,
+                                                        glMatrix.vec3.fromValues(-3.0, 3.0, 1.0));
 
             //------MAKE THE LIGHTS------
             //* // We define a light in space and retrieve its ID in the shader
@@ -406,13 +452,17 @@
             camera.show_projection_html(projMatElem, projection);
 
             // Retrieve the adress of the cubemap texture
-            var texCube = make_texture_cubemap(gl, '../textures/cubemaps/Yokohama2');
+            var texCube = make_texture_cubemap(gl, '../textures/cubemaps/galaxy');
             const u_cubemap = gl.getUniformLocation(shader_cubemap.program, 'u_cubemap');
 
             //*/
             //Retrieve adress of bump map textures
             var texBrick = make_texture(gl, '../textures/brickwall.jpg');
             const u_brick = gl.getUniformLocation(shader_bumpmap.program, 'u_brick');
+
+            //Retrieve adress of textures
+            var texSurprise = make_texture(gl, '../textures/surprise.jpg');
+            const u_surprise = gl.getUniformLocation(shader_texture.program, 'u_texture');
 
             /*/
             var texBrickNormal = make_texture_cubemap(gl, '../textures/brickwall_normal.jpg');
@@ -424,12 +474,14 @@
             const u_itM_ref = gl.getUniformLocation(shader_reflect.program, 'itM');
             const u_itM_light = gl.getUniformLocation(shader_light.program, 'itM');
             const u_itM_bump = gl.getUniformLocation(shader_bumpmap.program, 'itM');
+            const u_itM_tex = gl.getUniformLocation(shader_texture.program, 'itM');
             
             // We need to send the camera position to the shader
             const u_view_dir = gl.getUniformLocation(shader_refract.program, 'u_view_dir');
             const u_view_dir_ref = gl.getUniformLocation(shader_reflect.program, 'u_view_dir');
             const u_view_dir_light = gl.getUniformLocation(shader_light.program, 'u_view_dir');
             const u_view_dir_bump = gl.getUniformLocation(shader_bumpmap.program, 'u_view_dir');
+            const u_view_dir_tex = gl.getUniformLocation(shader_texture.program, 'u_view_dir');
 
             var deltaTime = 0;
             var positionX;
@@ -498,15 +550,15 @@
                 //                                        deltaTime % 180, 
                 //                                        glMatrix.vec3.fromValues(1.0, 1.0, 0.0));
                 
-                /*/
+                //*/
                 //second sphere with the same shader
-                sphere2_mesh.activate(shader_reflect);
+                spaceship_mesh.activate(shader_reflect);
                 // Only the model matrix changes!
-                gl.uniformMatrix4fv(unif2['model'], false, sphere2_mesh.model);
-                itM = glMatrix.mat4.invert(itM, sphere2_mesh.model);
+                gl.uniformMatrix4fv(unif2['model'], false, spaceship_mesh.model);
+                itM = glMatrix.mat4.invert(itM, spaceship_mesh.model);
                 itM = glMatrix.mat4.transpose(itM, itM);
                 gl.uniformMatrix4fv(u_itM, false, itM);
-                sphere2_mesh.draw();
+                spaceship_mesh.draw();
                 //*/
           
                 /* //Third object
@@ -571,6 +623,31 @@
                 gl.uniform3fv(u_view_dir_light, camera.get_position());
                 //*/
 
+                //*//--------------TEXTURED OBJECT-----------------
+
+                shader_texture.use();
+                var unif2 = shader_texture.get_uniforms();
+                view2 = camera.get_view_matrix();
+                gl.uniformMatrix4fv(unif2['view'], false, view2);
+                gl.uniformMatrix4fv(unif2['proj'], false, projection);
+
+                sphere3_mesh.activate(shader_texture);
+                gl.uniformMatrix4fv(unif2['model'], false, sphere3_mesh.model);
+                var itM = glMatrix.mat4.create();
+                itM = glMatrix.mat4.invert(itM, obj_mesh2.model);
+                itM = glMatrix.mat4.transpose(itM, itM);
+                gl.uniformMatrix4fv(u_itM_tex, false, itM);
+
+                // Activate the texture for the sphere
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_2D, texSurprise);
+                gl.uniform1i(u_surprise, 0);
+
+                sphere3_mesh.draw();
+                gl.uniform3fv(u_view_dir_tex, camera.get_position());
+                //*/
+
+
                 //BUMPMAP OBJECTS
                 //*/
                 shader_bumpmap.use();
@@ -606,6 +683,8 @@
                 gl.uniformMatrix4fv(u_itM_bump, false, itM);
                 ground_mesh.draw();
                 //*/
+
+
                 
                 //------DRAWING THE CUBE MAP------
                 //*    // uncomment only one slash "/" to comment the cubemap ;)
