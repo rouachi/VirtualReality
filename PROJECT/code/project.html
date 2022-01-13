@@ -28,62 +28,103 @@
             gl.enable(gl.DEPTH_TEST);
             //gl.enable(gl.CULL_FACE); // cull hidden faces behind normals!
 
+
+
+            /*const source_texture_V = `
+              attribute vec3 position;
+              //attribute vec2 texcoord;
+              //attribute vec3 normal;
+              //varying vec3 v_texcoord;
+              attribute vec2 uv;
+              varying vec2 vUV;
+
+              uniform mat4 M;
+              //uniform mat4 itM;  // inverse transpose model!
+              uniform mat4 V;
+              uniform mat4 P;
+
+              void main() {
+                //mat3 Vrotation = mat3(V);
+                //vec4 frag_coord = vec4(position, 1.0);
+                gl_Position = P*V*M*vec4(position, 1.0);
+
+                //v_texcoord = frag_coord.xyz;
+              }
+            `;
+
+
+
+            const source_texture_F = `
+              precision mediump float;
+              //varying vec3 v_texcoord;
+              varying vec2 vUV;
+
+              // We have a samplerCube this time! not a 2D texture
+              uniform sampler2D sampler;
+
+              void main() {
+                gl_FragColor = texture2D(sampler,vUV);
+                // We sample the cube at the position of the vertices!
+                //gl_FragColor = textureCube(u_cubemap, v_texcoord);
+              }
+            `;
+*/
             const source_cubemap_V = `
-      attribute vec3 position;
-      attribute vec2 texcoord;
-      attribute vec3 normal;
-      varying vec3 v_texcoord;
+              attribute vec3 position;
+              attribute vec2 texcoord;
+              attribute vec3 normal;
+              varying vec3 v_texcoord;
 
-      uniform mat4 M;
-      uniform mat4 itM;  // inverse transpose model!
-      uniform mat4 V;
-      uniform mat4 P;
+              uniform mat4 M;
+              uniform mat4 itM;  // inverse transpose model!
+              uniform mat4 V;
+              uniform mat4 P;
 
-      void main() {
-        mat3 Vrotation = mat3(V);
-        vec4 frag_coord = vec4(position, 1.0);
-        gl_Position = (P*mat4(Vrotation)*frag_coord).xyww;
+              void main() {
+                mat3 Vrotation = mat3(V);
+                vec4 frag_coord = vec4(position, 1.0);
+                gl_Position = (P*mat4(Vrotation)*frag_coord).xyww;
 
-        v_texcoord = frag_coord.xyz;
-      }
-    `;
+                v_texcoord = frag_coord.xyz;
+              }
+            `;
 
             const source_cubemap_F = `
-      precision mediump float;
-      varying vec3 v_texcoord;
+              precision mediump float;
+              varying vec3 v_texcoord;
 
-      // We have a samplerCube this time! not a 2D texture
-      uniform samplerCube u_cubemap;
+              // We have a samplerCube this time! not a 2D texture
+              uniform samplerCube u_cubemap;
 
-      void main() {
-        //gl_FragColor = texture2D(u_texture, vec2(v_texcoord.x, 1.0-v_texcoord.y));
-        // We sample the cube at the position of the vertices!
-        gl_FragColor = textureCube(u_cubemap, v_texcoord);
-      }
-    `;
+              void main() {
+                //gl_FragColor = texture2D(u_texture, vec2(v_texcoord.x, 1.0-v_texcoord.y));
+                // We sample the cube at the position of the vertices!
+                gl_FragColor = textureCube(u_cubemap, v_texcoord);
+              }
+            `;
 
-                const source_refract_V = `
-      attribute vec3 position;
-      attribute vec2 texcoord;
-      attribute vec3 normal;
+            const source_refract_V = `
+              attribute vec3 position;
+              attribute vec2 texcoord;
+              attribute vec3 normal;
 
-      varying vec3 v_normal;
-      varying vec3 v_frag_coord;
+              varying vec3 v_normal;
+              varying vec3 v_frag_coord;
 
-      uniform mat4 M;
-      uniform mat4 itM;  // inverse transpose model!
-      uniform mat4 V;
-      uniform mat4 P;
+              uniform mat4 M;
+              uniform mat4 itM;  // inverse transpose model!
+              uniform mat4 V;
+              uniform mat4 P;
 
-      void main() {
-        vec4 frag_coord = M*vec4(position, 1.0);
-        gl_Position = (P*V*frag_coord);
-        v_normal = vec3(itM * vec4(normal, 1.0));
-        v_frag_coord = frag_coord.xyz;
-      }
-    `;
+              void main() {
+                vec4 frag_coord = M*vec4(position, 1.0);
+                gl_Position = (P*V*frag_coord);
+                v_normal = vec3(itM * vec4(normal, 1.0));
+                v_frag_coord = frag_coord.xyz;
+              }
+            `;
 
-            const source_refract_F = `
+    const source_refract_F = `
       precision mediump float;
 
       varying vec3 v_normal;
@@ -131,7 +172,7 @@
       }
     `;
 
-            const source_reflect_F = `
+    const source_reflect_F = `
       precision mediump float;
 
       varying vec3 v_normal;
@@ -221,6 +262,7 @@
             var shader_refract = make_shader(gl, source_refract_V, source_refract_F);
             var shader_reflect = make_shader(gl, source_reflect_V, source_reflect_F); //shader for second object
             var shader_light = make_shader(gl, sourceV, sourceF);
+            //var shader_texture = make_shader(gl,source_texture_V, source_texture_F);
 
             //------LOADING, MAKING AND MOVING THE OBJECTS------
             var cube = await load_obj('../objects/cube.obj');
@@ -270,6 +312,11 @@
             // Retrieve the adress of the cubemap texture
             var texCube = make_texture_cubemap(gl, '../textures/cubemaps/galaxy');
             const u_cubemap = gl.getUniformLocation(shader_cubemap.program, 'u_cubemap');
+
+            /*// Retrieve the adress of the sphere texture
+            var texSphere = make_texture(gl, '../textures/cubemaps/galaxy');
+            const u_cubemap = gl.getUniformLocation(shader_cubemap.program, 'u_cubemap');
+*/
 
             // We need to send the inverse transpose of the model matrix for the model
             const u_itM = gl.getUniformLocation(shader_refract.program, 'itM');
