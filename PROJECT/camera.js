@@ -84,6 +84,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
                    y: evt.clientY - rect.top
                  };
              }
+
             canvas.addEventListener("mousemove", function( event ) {
                var pos = getMousePos(canvas, event);
                x = pos.x - canvas.width / 2
@@ -95,7 +96,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
                mouse_prev_x = x
                mouse_prev_y = y
              }, false);
-        */
+        //*/
     }
 
     function get_view_matrix() {
