@@ -36,7 +36,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
     function register_keyboard() {
         document.addEventListener('keydown', (event) => {
             const key = event.key;
-            
+
             // Remove page scrolling with arrows to handle camera
             if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
                 event.view.event.preventDefault();
@@ -74,7 +74,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
     }
 
     function register_mouse() {
-        /*
+
             // For the mighty and worthy students that want to make
             // rotations with the mouse, you can find here a starting code.
             function getMousePos(canvas, evt) {
@@ -84,6 +84,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
                    y: evt.clientY - rect.top
                  };
              }
+
             canvas.addEventListener("mousemove", function( event ) {
                var pos = getMousePos(canvas, event);
                x = pos.x - canvas.width / 2
@@ -95,7 +96,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
                mouse_prev_x = x
                mouse_prev_y = y
              }, false);
-        */
+        
     }
 
     function get_view_matrix() {
@@ -193,25 +194,25 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
         up = glMatrix.vec3.cross(up, right, front);
         up = glMatrix.vec3.normalize(up, up);
     }
-    
+
     function get_position() {
         return position;
     }
-    
+
     function show_view_html(tag, view) {
         show_mat(tag, 'View', view);
     }
-      
-    
+
+
     function show_projection_html(tag, projection) {
       show_mat(tag, 'Proj', projection);
     }
-    
+
     // print a float with fixed decimals
     function fl(x) {
       return Number.parseFloat(x).toFixed(3);
     }
-    
+
     function show_mat(tag, name, m) {
       // WARNING: rounded fixed floating points using fl(x)
       var txt = name + ':<br />'
