@@ -186,13 +186,14 @@
               uniform vec3 u_light_pos;
               uniform vec3 u_light_pos2;
               uniform vec3 u_view_dir;
+              uniform float time;
 
               void main() {
                 vec3 normal = normalize(v_normal);
 
                 // light color
-                vec3 light_color = vec3(0.84, 0.7, 0.16);
-                vec3 light_color2 = vec3(0.9, 0.9, 0.0);
+                vec3 light_color = vec3(0.0, 0.0, 1.0);
+                vec3 light_color2 = vec3(0.0, 0.5, 0.0);
 
                 // Ambient
                 float ambient = 0.1;
@@ -217,6 +218,8 @@
 
                 //vec3 color = (ambient + specular + diffusion) * light_color;
                 vec3 color = (ambient + specular + diffusion) * light_color + (ambient + specular2 + diffusion2) * light_color2;
+
+                float cst = mod(time, 1.0);
                 gl_FragColor = vec4(color, 1.0);
               }
               `;
@@ -253,6 +256,44 @@
         		  }
           		`;
 
+// SHADERS TEST
+/*
+            const sourceFlashV = `
+              attribute vec3 position;
+              attribute vec3 normal;
+              varying vec3 v_normal;
+              varying vec3 v_frag_coord;
+
+              uniform mat4 M;
+              uniform mat4 itM;  // inverse transpose model!
+              uniform mat4 V;
+              uniform mat4 P;
+
+                void main() {
+                  vec4 frag_coord = M*vec4(position, 1.0);
+                  gl_Position = P*V*frag_coord;
+
+                  // Transform correctly the normals!
+                  v_normal = vec3(itM * vec4(normal, 1.0));
+
+                  v_frag_coord = frag_coord.xyz;
+                }
+            `;
+
+            const sourceFlashF = `
+              precision mediump float;
+
+              //receiving data from the rendering loop
+              uniform vec3 color; //uniform vector color in the frag shader
+              uniform float time; //uniform float time in FS
+
+              // Using these uniforms in FS to make the color intensity change
+              void main(){
+                float cst = mod(time, 1.0);
+                gl_FragColor = vec4(cst*color, 1.0);
+              }
+            `;
+*/
 
             //------MAKING THE SHADERS------
             var shader_cubemap = make_shader(gl, source_cubemap_V, source_cubemap_F);
@@ -262,24 +303,25 @@
             var shader_light = make_shader(gl, sourceV, sourceF);
             var shader_texture = make_shader(gl, source_texture_V, source_texture_F);
 
+
             //------LOADING, MAKING AND MOVING THE OBJECTS------
             var cube = await load_obj('../objects/cube.obj');
             var cube_mesh = await make_object(gl, cube)
 
-            //Sphere1
+      //Sphere1 - Moon
             var sphere = await load_obj('../objects/sphere_smooth.obj');
             var sphere_mesh1 = await make_object(gl, sphere)
             sphere_mesh1.model = glMatrix.mat4.translate(sphere_mesh1.model,
                                                         sphere_mesh1.model,
                                                         glMatrix.vec3.fromValues(1, 2, -1));
 
-            //Sphere2
+      //Sphere2 - Earth
             var sphere_mesh2 = await make_object(gl, sphere)
             sphere_mesh2.model = glMatrix.mat4.translate(sphere_mesh2.model,
                                                         sphere_mesh2.model,
                                                         glMatrix.vec3.fromValues(-0.5, 0.0, 1.0));
             sphere_mesh2.model = glMatrix.mat4.scale(sphere_mesh2.model, sphere_mesh2.model,
-                                                       glMatrix.vec3.fromValues(1, 3, 5));
+                                                       glMatrix.vec3.fromValues(1, 1, 1));
             //Satelite
             var sat = await load_obj('../objects/sat.obj');
             var sat_mesh = await make_object(gl, sat)
@@ -289,12 +331,13 @@
             sat_mesh.model = glMatrix.mat4.scale(sat_mesh.model, sat_mesh.model,
                                                        glMatrix.vec3.fromValues(0.001, 0.001, 0.001));
 
-            //Sphere3
+            //Sphere3 - Sun
             var sphere_mesh3 = await make_object(gl,sphere);
             sphere_mesh3.model = glMatrix.mat4.translate(sphere_mesh3.model,
                                                         sphere_mesh3.model,
-                                                        glMatrix.vec3.fromValues(-3.0, 0.0, 1.0));
-
+                                                        glMatrix.vec3.fromValues(5.0, 7.0, 0.0));
+            sphere_mesh3.model = glMatrix.mat4.scale(sphere_mesh3.model, sphere_mesh3.model,
+                                                       glMatrix.vec3.fromValues(3, 3, 3));
             //SPACESHIP
             var spaceship = await load_obj('../objects/spaceship.obj');
             var spaceship_mesh = await make_object(gl, spaceship);
@@ -304,15 +347,25 @@
              spaceship_mesh.model = glMatrix.mat4.scale(spaceship_mesh.model, spaceship_mesh.model,
                                                         glMatrix.vec3.fromValues(0.01, 0.01, 0.01));
 
-            //Asteroid
+            //Asteroid 1
             var asteroid = await load_obj('../objects/steroid.obj');
-            var asteroid_mesh = await make_object(gl, asteroid);
-            asteroid_mesh.model = glMatrix.mat4.translate(asteroid_mesh.model,
-                                                            asteroid_mesh.model,
+            var asteroid_mesh1 = await make_object(gl, asteroid);
+            asteroid_mesh1.model = glMatrix.mat4.translate(asteroid_mesh1.model,
+                                                            asteroid_mesh1.model,
                                                         glMatrix.vec3.fromValues(-3.0, 1.0, 2.0));
 
-            asteroid_mesh.model = glMatrix.mat4.scale(asteroid_mesh.model, asteroid_mesh.model,
+            asteroid_mesh1.model = glMatrix.mat4.scale(asteroid_mesh1.model, asteroid_mesh1.model,
                                                        glMatrix.vec3.fromValues(0.001, 0.001, 0.001));
+
+            //Asteroid 2
+            var asteroid_mesh2 = await make_object(gl, asteroid);
+            asteroid_mesh2.model = glMatrix.mat4.translate(asteroid_mesh2.model,
+                                                            asteroid_mesh2.model,
+                                                        glMatrix.vec3.fromValues(3.0, 1.0, 2.0));
+
+            asteroid_mesh2.model = glMatrix.mat4.scale(asteroid_mesh2.model, asteroid_mesh2.model,
+                                                       glMatrix.vec3.fromValues(0.001, 0.001, 0.001));
+
 
             //------MAKE THE LIGHTS------
             //* // We define a light in space and retrieve its ID in the shader
@@ -322,11 +375,12 @@
             const light_pos2 = glMatrix.vec3.fromValues(1.0, -1.6, -5);
             const u_light_pos2 = gl.getUniformLocation(shader_light.program, 'u_light_pos2');
 
+            var u_time = gl.getUniformLocation(shader_light.program, "time");
 
-            position = glMatrix.vec3.fromValues(0, 0, -4.0)
+            position = glMatrix.vec3.fromValues(0, 0, 4.0)
             up = glMatrix.vec3.fromValues(0.0, 1.0, 0.0)
             yaw = -90.0
-            pitch = 0.0
+            pitch = 100.0
             var camera = make_camera(canvas, position, up, yaw, pitch)
             var projection = camera.get_projection(45.0, c_width / c_height, 0.01, 100.0)
 
@@ -339,8 +393,18 @@
             const u_cubemap = gl.getUniformLocation(shader_cubemap.program, 'u_cubemap');
 
             // Retrieve the adress of the sphere1 texture
+            var tex_mesh1 = make_texture(gl, '../textures/moonmap.jpg');
+            const u_tex_mesh1 = gl.getUniformLocation(shader_texture.program,'u_texture');
+
+            // Retrieve the adress of the sphere2 texture
             var tex_mesh2 = make_texture(gl, '../textures/earthmap.jpg');
             const u_tex_mesh2 = gl.getUniformLocation(shader_texture.program,'u_texture');
+
+            //sun texture
+
+            var tex_mesh3 = make_texture(gl, '../textures/sun.jpeg');
+            const u_tex_mesh3 = gl.getUniformLocation(shader_texture.program,'u_texture');
+
 
             // Retrieve the adress of the satelite texture
             //var tex_sat = make_texture(gl, '../textures/mirror.jpeg');
@@ -370,33 +434,26 @@
 
                 //------DRAWING OF THE SCENE------
 
-                //REFRACTION OBJECTS
+          //REFRACTION OBJECTS
                 shader_refract.use();
                 var unif = shader_refract.get_uniforms();
                 view = camera.get_view_matrix();
                 gl.uniformMatrix4fv(unif['view'], false, view);
                 gl.uniformMatrix4fv(unif['proj'], false, projection);
 
-                //Moon - sphere 1
-                sphere_mesh1.activate(shader_refract);
-                gl.uniformMatrix4fv(unif['model'], false, sphere_mesh1.model);
+                //refraction asteroid 1
+                asteroid_mesh1.activate(shader_refract);
+                gl.uniformMatrix4fv(unif['model'], false, asteroid_mesh1.model);
                 var itM = glMatrix.mat4.create();
-                itM = glMatrix.mat4.invert(itM, sphere_mesh1.model);
+                itM = glMatrix.mat4.invert(itM, asteroid_mesh1.model);
                 itM = glMatrix.mat4.transpose(itM, itM);
                 gl.uniformMatrix4fv(u_itM, false, itM);
-                sphere_mesh1.draw();
+                asteroid_mesh1.draw();
                 gl.uniform3fv(u_view_dir, camera.get_position());
 
-                asteroid_mesh.activate(shader_refract);
-                gl.uniformMatrix4fv(unif['model'], false, asteroid_mesh.model);
-                var itM = glMatrix.mat4.create();
-                itM = glMatrix.mat4.invert(itM, asteroid_mesh.model);
-                itM = glMatrix.mat4.transpose(itM, itM);
-                gl.uniformMatrix4fv(u_itM, false, itM);
-                asteroid_mesh.draw();
-                gl.uniform3fv(u_view_dir, camera.get_position());
 
-                //Texture of Sphere 2
+          //TEXTURE OBJECTS
+                //Texture of Sphere 2 - Earth
                 shader_texture.use();
                 var unif2 = shader_texture.get_uniforms();
                 view2 = camera.get_view_matrix();
@@ -410,7 +467,6 @@
                 itM = glMatrix.mat4.transpose(itM, itM);
                 gl.uniformMatrix4fv(u_itM_tex, false, itM);
 
-                // Activate the texture for the sphere
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, tex_mesh2);
                 gl.uniform1i(u_tex_mesh2, 0);
@@ -418,12 +474,46 @@
                 sphere_mesh2.draw();
                 gl.uniform3fv(u_view_dir_tex, camera.get_position());
 
-                sphere_mesh2.model = glMatrix.mat4.rotate(sphere_mesh2.model, sphere_mesh1.model,
+//*
+                sphere_mesh2.model = glMatrix.mat4.rotate(sphere_mesh2.model, sphere_mesh3.model,
                                                        deltaTime,
-                                                       glMatrix.vec3.fromValues(1, 1, 0));
+                                                       glMatrix.vec3.fromValues(1, 10, 0));
+//*/
+                //Texture of Moon - sphere 1
+                sphere_mesh1.activate(shader_texture);
+                gl.uniformMatrix4fv(unif2['model'], false, sphere_mesh1.model);
+                var itM = glMatrix.mat4.create();
+                itM = glMatrix.mat4.invert(itM, sphere_mesh1.model);
+                itM = glMatrix.mat4.transpose(itM, itM);
+                gl.uniformMatrix4fv(u_itM_tex, false, itM);
 
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, tex_mesh1);
+                gl.uniform1i(u_tex_mesh1, 0);
 
-                //* //Second object
+                sphere_mesh1.draw();
+                gl.uniform3fv(u_view_dir, camera.get_position());
+//*
+                sphere_mesh1.model = glMatrix.mat4.rotate(sphere_mesh1.model, sphere_mesh2.model,
+                                       deltaTime,
+                                       glMatrix.vec3.fromValues(0, 1, 0));
+//*/
+
+                sphere_mesh3.activate(shader_texture);
+                gl.uniformMatrix4fv(unif2['model'], false, sphere_mesh3.model);
+                var itM = glMatrix.mat4.create();
+                itM = glMatrix.mat4.invert(itM, sphere_mesh3.model);
+                itM = glMatrix.mat4.transpose(itM, itM);
+                gl.uniformMatrix4fv(u_itM_tex, false, itM);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, tex_mesh3);
+                gl.uniform1i(u_tex_mesh3, 0);
+
+                sphere_mesh3.draw();
+                gl.uniform3fv(u_view_dir, camera.get_position());
+
+            //REFLECTION OBJECTS
                 shader_reflect.use();
                 var unif2 = shader_reflect.get_uniforms();
                 view2 = camera.get_view_matrix();
@@ -431,15 +521,17 @@
                 gl.uniformMatrix4fv(unif2['proj'], false, projection);
 
                 spaceship_mesh.activate(shader_reflect);
-                gl.uniformMatrix4fv(unif['model'], false, spaceship_mesh.model);
+                // Only the model matrix changes!
+                gl.uniformMatrix4fv(unif2['model'], false, spaceship_mesh.model);
                 var itM = glMatrix.mat4.create();
                 itM = glMatrix.mat4.invert(itM, spaceship_mesh.model);
                 itM = glMatrix.mat4.transpose(itM, itM);
-                gl.uniformMatrix4fv(u_itM, false, itM);
+                gl.uniformMatrix4fv(u_itM_ref, false, itM);
                 spaceship_mesh.draw();
-                gl.uniform3fv(u_view_dir, camera.get_position());
+                gl.uniform3fv(u_view_dir_ref, camera.get_position());
 
-                //* // Third object
+
+          //LIGHT OBJECTS
                 shader_light.use();
                 var unif3 = shader_light.get_uniforms();
                 view3 = camera.get_view_matrix();
@@ -448,18 +540,13 @@
                 // Send the light position to the shader
                 gl.uniform3fv(u_light_pos, light_pos);
                 gl.uniform3fv(u_light_pos2, light_pos2);
+
+
                 // Add the viewer position
                 console.log(typeof(camera.position))
                 // Set one time the camera position for all the shaders
                 gl.uniform3fv(u_view_dir_light, camera.get_position());
 
-                sphere_mesh3.activate(shader_light);
-                gl.uniformMatrix4fv(unif3['model'], false, sphere_mesh3.model);
-                var itM = glMatrix.mat4.create();
-                itM = glMatrix.mat4.invert(itM, sphere_mesh3.model);
-                itM = glMatrix.mat4.transpose(itM, itM);
-                gl.uniformMatrix4fv(u_itM_light, false, itM);
-                sphere_mesh3.draw();
 
                 sat_mesh.activate(shader_light);
                 gl.uniformMatrix4fv(unif3['model'], false, sat_mesh.model);
@@ -467,6 +554,7 @@
                 itM = glMatrix.mat4.invert(itM, sat_mesh.model);
                 itM = glMatrix.mat4.transpose(itM, itM);
                 gl.uniformMatrix4fv(u_itM_light, false, itM);
+                gl.uniform1f(u_time, deltaTime);
                 sat_mesh.draw();
                 gl.uniform3fv(u_view_dir_light, camera.get_position());
 
@@ -511,15 +599,17 @@
             }
 
             var prev = 0
-            const fpsElem = document.querySelector("#fps");
+            //const fpsElem = document.querySelector("#fps");
 
             function fps(now) {
+              /*
                 now *= 0.001;
                 const deltaTime = now - prev;
                 prev = now;
                 const fps = 1 / deltaTime;
                 fpsElem.textContent = 'FPS: ' + fps.toFixed(1);
                 return fps;
+              */
             }
 
             animate(0);

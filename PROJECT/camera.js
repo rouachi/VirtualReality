@@ -17,7 +17,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
     var yaw = 90.0;
     var pitch = 0.0;
     var movement_speed = 0.15;
-    var mouse_sensitivity = 1.5;
+    var mouse_sensitivity = 0.5;
     var zoom = 0.0; // Not used anymore
 
     var dt = 0.0;
@@ -74,7 +74,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
     }
 
     function register_mouse() {
-
+//*
             // For the mighty and worthy students that want to make
             // rotations with the mouse, you can find here a starting code.
             function getMousePos(canvas, evt) {
@@ -96,7 +96,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
                mouse_prev_x = x
                mouse_prev_y = y
              }, false);
-        
+        //*/
     }
 
     function get_view_matrix() {
