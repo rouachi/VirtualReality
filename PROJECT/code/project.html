@@ -130,7 +130,7 @@
 
               void main() {
                 vec4 frag_coord = M*vec4(position, 1.0);
-                gl_Position = (P*V*frag_coord);
+                gl_Position = (P*frag_coord);
                 v_normal = vec3(itM * vec4(normal, 1.0));
                 v_frag_coord = frag_coord.xyz;
               }
@@ -553,9 +553,12 @@
             var spaceship_mesh = await make_object(gl, spaceship);
             spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
                                                             spaceship_mesh.model,
-                                                        glMatrix.vec3.fromValues(0.0, -1.0, 7.0));
+                                                        glMatrix.vec3.fromValues(0.0, -1.0, -7.0));
              spaceship_mesh.model = glMatrix.mat4.scale(spaceship_mesh.model, spaceship_mesh.model,
                                                         glMatrix.vec3.fromValues(0.01, 0.01, 0.01));
+            spaceship_mesh.model = glMatrix.mat4.rotate(spaceship_mesh.model, spaceship_mesh.model,
+                                                        3.14,
+                                                        glMatrix.vec3.fromValues(0.0, 1.0, 0.0));
 
   //Asteroid 1
             var asteroid = await load_obj('../objects/steroid.obj');
@@ -969,12 +972,12 @@
 
                                                                         //*/
                 //translation of SPACESHIP
-
+/*
                 spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
                                                               spaceship_mesh.model,
                                                               glMatrix.vec3.fromValues(0.0, deltaTime/2, 0.0));
 
-
+*/
                 camera.show_view_html(camMatElem, camera.get_view_matrix());
                 //fps(time);
                 window.requestAnimationFrame(animate); // While(True) loop!
