@@ -8,7 +8,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
     }
     var canvas = canvas;
     var position = position;
-    var front = glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+    var front = glMatrix.vec3.fromValues(0, 0, -1.0);
     var up = up;
     var right = glMatrix.vec3.create();
     var world_up = up;
@@ -96,7 +96,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
                mouse_prev_x = x
                mouse_prev_y = y
              }, false);
-        */
+        //*/
     }
 
     function get_view_matrix() {

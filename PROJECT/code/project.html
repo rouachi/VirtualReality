@@ -256,44 +256,97 @@
         		  }
           		`;
 
-// SHADERS TEST
-/*
-            const sourceFlashV = `
-              attribute vec3 position;
-              attribute vec3 normal;
-              varying vec3 v_normal;
-              varying vec3 v_frag_coord;
+// BUMP MAPPING
+
+            const BumpMapV = `
+              attribute vec3 position; //aVertexPosition
+              attribute vec3 normal;    //aVertexNormal
+              attribute vec3 tangent;   //aVertexTangent
+              attribute vec4 color;     //aVertexColor
+              attribute vec2 texcoord;  //aVertexTextureCoords
+
 
               uniform mat4 M;
               uniform mat4 itM;  // inverse transpose model!
-              uniform mat4 V;
+              uniform mat4 N;
               uniform mat4 P;
 
-                void main() {
-                  vec4 frag_coord = M*vec4(position, 1.0);
-                  gl_Position = P*V*frag_coord;
+              uniform vec3 u_light_pos; //uLightPosition
 
-                  // Transform correctly the normals!
-                  v_normal = vec3(itM * vec4(normal, 1.0));
+              varying vec2 TexCoords; //vTextureCoord
+              varying vec3 vTangentLightDir;
+              varying vec3 vTangentEyeDir;
 
-                  v_frag_coord = frag_coord.xyz;
-                }
+              void main() {
+
+                //transformed vertex position
+                vec4 frag_coord = M*vec4(position, 1.0);  //vertex
+
+                //transformed normal position
+                vec3 v_normal = vec3(M*vec4(normal, 1.0));
+                vec3 v_tangent = vec3(M*vec4(tangent, 1.0));
+                vec3 v_bitangent = cross(v_normal, v_tangent);
+
+                mat3 tbnMatrix = mat3(
+                  v_tangent.x, v_bitangent.x, v_normal.x,
+                  v_tangent.y, v_bitangent.y, v_normal.y,
+                  v_tangent.z, v_bitangent.z, v_normal.z
+                );
+
+                //light direction, from light position to vertex
+                vec3 lightDirection = u_light_pos - frag_coord.xyz;
+
+                //eye direction, from cam position to vertex
+                vec3 eyeDirection = -frag_coord.xyz;
+
+                //Final vertex position
+
+                gl_Position = P*M*vec4(position, 1.0);
+                v_texcoord = texcoord;
+                vTangentLightDir = lightDirection *tbnMatrix;
+                vTangentEyeDir = eyeDirection *tbnMatrix;
+                    }
             `;
 
-            const sourceFlashF = `
+            const BumpMapF = `
               precision mediump float;
 
-              //receiving data from the rendering loop
-              uniform vec3 color; //uniform vector color in the frag shader
-              uniform float time; //uniform float time in FS
+              uniform vec4 uMaterialDiffuse;    //??
+              uniform vec4 uMatetialAmbiant;    //??
 
-              // Using these uniforms in FS to make the color intensity change
-              void main(){
-                float cst = mod(time, 1.0);
-                gl_FragColor = vec4(cst*color, 1.0);
+              uniform vec4 uLightAmbient;
+              uniform vec4 uLightDiffuse;
+
+              uniform sampler2D uSampler;
+              uniform sampler2D uNormalSampler;
+
+              varying vec4 vColor;
+              varyint vec2 v_texcoord;
+              varying vec3 vTangentLightDir;
+              varying vec3 vTangentEyeDir;
+
+
+              void main() {
+                //unpack tg-space normal from texture
+                vec3 v_normal = normalize(2.0 * (texture2D(uNormalSampler, v_texcoord).rgb - 0.5));
+
+                //normalise light direction and determine how much light is hitting this point
+                vec3 lightDirection = normalize(vTangentLightDir);
+                float lambertTerm = max(dot(v_normal,lightDirection),0.20);
+
+                // Calculate Specular level
+                vec3 eyeDirection = normalize(vTangentEyeDir);
+                vec3 reflectDir = reflect(-lightDirection, v_normal);
+                float Is = pow(clamp(dot(reflectDir, eyeDirection), 0.0, 1.0), 8.0);
+
+                // Combine lighting and material colors
+                vec4 Ia = uLightAmbient * uMaterialAmbient;
+                vec4 Id = uLightDiffuse * uMaterialDiffuse * texture2D(uSampler, v_texcoord) * lambertTerm;
+
+                gl_FragColor = Ia + Id + Is;
               }
             `;
-*/
+
 
             //------MAKING THE SHADERS------
             var shader_cubemap = make_shader(gl, source_cubemap_V, source_cubemap_F);
@@ -306,33 +359,78 @@
 
             //------LOADING, MAKING AND MOVING THE OBJECTS------
             var cube = await load_obj('../objects/cube.obj');
-            var cube_mesh = await make_object(gl, cube)
+            var cube_mesh = await make_object(gl, cube);
 
             cube_mesh.model = glMatrix.mat4.scale(cube_mesh.model, cube_mesh.model,
                        glMatrix.vec3.fromValues(5, 5, 5));
 
-      //Moon
             var sphere = await load_obj('../objects/sphere_smooth.obj');
+
+  //Sun
+            var sun_mesh = await make_object(gl,sphere);
+            sun_mesh.model = glMatrix.mat4.translate(sun_mesh.model,
+                                                         sun_mesh.model,
+                                                         glMatrix.vec3.fromValues(0.0, 0.0, 0.0)); //(horizontal, up/down, dist from sun)
+
+  //Mercury
+            var mercury_mesh = await make_object(gl,sphere);
+            mercury_mesh.model = glMatrix.mat4.translate(mercury_mesh.model,
+                                                       sun_mesh.model,
+                                                       glMatrix.vec3.fromValues(-6.0, 0.0, 10.0));
+
+   //Venus
+          var venus_mesh = await make_object(gl, sphere);
+          venus_mesh.model = glMatrix.mat4.translate(venus_mesh.model,
+                                                      sun_mesh.model,
+                                                      glMatrix.vec3.fromValues(0.0, 0.0, 15.0));
+
+
+  //Earth
+            var earth_mesh = await make_object(gl, sphere);
+            earth_mesh.model = glMatrix.mat4.translate(earth_mesh.model,
+                                                        sun_mesh.model,
+                                                        glMatrix.vec3.fromValues(0.0, 0.0, 20.0));
+
+  //Mars
+            var mars_mesh = await make_object(gl, sphere);
+            mars_mesh.model = glMatrix.mat4.scale(mars_mesh.model, mars_mesh.model,
+                                                       glMatrix.vec3.fromValues(0.54, 0.54, 0.54));
+            mars_mesh.model = glMatrix.mat4.translate(mars_mesh.model,
+                                                      sun_mesh.model,
+                                                      glMatrix.vec3.fromValues(0.0, 0.0, 25.0));
+
+  //Jupiter
+            var jupiter_mesh = await make_object(gl, sphere);
+            jupiter_mesh.model = glMatrix.mat4.translate(jupiter_mesh.model,
+                                                      sun_mesh.model,
+                                                      glMatrix.vec3.fromValues(0.0, 0.0, 30.0));
+
+  //Saturn
+            var saturn_mesh = await make_object(gl, sphere);
+            saturn_mesh.model = glMatrix.mat4.translate(saturn_mesh.model,
+                                                      sun_mesh.model,
+                                                      glMatrix.vec3.fromValues(0.0, 0.0, 35.0));
+
+  //Uranus
+            var uranus_mesh = await make_object(gl, sphere);
+            uranus_mesh.model = glMatrix.mat4.translate(uranus_mesh.model,
+                                                      sun_mesh.model,
+                                                      glMatrix.vec3.fromValues(0.0, 0.0, 40.0));
+
+  //Neptune
+            var neptune_mesh = await make_object(gl, sphere);
+            neptune_mesh.model = glMatrix.mat4.translate(neptune_mesh.model,
+                                                      sun_mesh.model,
+                                                      glMatrix.vec3.fromValues(0.0, 0.0, 45.0));
+
+
+  //Moon
             var moon_mesh = await make_object(gl, sphere)
-            moon_mesh.model = glMatrix.mat4.translate(moon_mesh.model,
-                                                        moon_mesh.model,
-                                                        glMatrix.vec3.fromValues(1, 2, -1));
             moon_mesh.model = glMatrix.mat4.scale(moon_mesh.model, moon_mesh.model,
                                                        glMatrix.vec3.fromValues(0.1, 0.1, 0.1));
-      //Sphere2 - Earth
-            var earth_mesh = await make_object(gl, sphere)
-            earth_mesh.model = glMatrix.mat4.translate(earth_mesh.model,
-                                                        earth_mesh.model,
-                                                        glMatrix.vec3.fromValues(-6.0, 0.0, -10.0));
 
-     //Venus
-            var venus_mesh = await make_object(gl, sphere)
-            venus_mesh.model = glMatrix.mat4.translate(venus_mesh.model,
-                                                        venus_mesh.model,
-                                                        glMatrix.vec3.fromValues(-4.0, 0.0, -10.0));
-            venus_mesh.model = glMatrix.mat4.scale(venus_mesh.model, venus_mesh.model,
-                                                       glMatrix.vec3.fromValues(0.81, 0.81, 0.81));
-            //Satelite
+
+  //Satelite
             var sat = await load_obj('../objects/sat.obj');
             var sat_mesh = await make_object(gl, sat)
             sat_mesh.model = glMatrix.mat4.translate(sat_mesh.model,
@@ -341,22 +439,9 @@
             sat_mesh.model = glMatrix.mat4.scale(sat_mesh.model, sat_mesh.model,
                                                        glMatrix.vec3.fromValues(0.001, 0.001, 0.001));
 
-            //Sphere3 - Sun
-            var sun_mesh = await make_object(gl,sphere);
-            sun_mesh.model = glMatrix.mat4.translate(sun_mesh.model,
-                                                        sun_mesh.model,
-                                                        glMatrix.vec3.fromValues(0.0, 0.0, -10.0));
-            sun_mesh.model = glMatrix.mat4.scale(sun_mesh.model, sun_mesh.model,
-                                                       glMatrix.vec3.fromValues(3.0, 3.0, 3.0));
 
-             //Sphesre3 - Mercury
-             var mercury_mesh = await make_object(gl,sphere);
-             mercury_mesh.model = glMatrix.mat4.translate(mercury_mesh.model,
-                                                         mercury_mesh.model,
-                                                         glMatrix.vec3.fromValues(-2.0, 0.0, -10.0));
-             mercury_mesh.model = glMatrix.mat4.scale(mercury_mesh.model, mercury_mesh.model,
-                                                        glMatrix.vec3.fromValues(0.055, 0.055, 0.055));
-            //SPACESHIP
+
+  //SPACESHIP
             var spaceship = await load_obj('../objects/spaceship.obj');
             var spaceship_mesh = await make_object(gl, spaceship);
             spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
@@ -365,7 +450,7 @@
              spaceship_mesh.model = glMatrix.mat4.scale(spaceship_mesh.model, spaceship_mesh.model,
                                                         glMatrix.vec3.fromValues(0.01, 0.01, 0.01));
 
-            //Asteroid 1
+  //Asteroid 1
             var asteroid = await load_obj('../objects/steroid.obj');
             var asteroid_mesh1 = await make_object(gl, asteroid);
             asteroid_mesh1.model = glMatrix.mat4.translate(asteroid_mesh1.model,
@@ -375,7 +460,7 @@
             asteroid_mesh1.model = glMatrix.mat4.scale(asteroid_mesh1.model, asteroid_mesh1.model,
                                                        glMatrix.vec3.fromValues(0.001, 0.001, 0.001));
 
-            //Asteroid 2
+  //Asteroid 2
             var asteroid_mesh2 = await make_object(gl, asteroid);
             asteroid_mesh2.model = glMatrix.mat4.translate(asteroid_mesh2.model,
                                                             asteroid_mesh2.model,
@@ -395,7 +480,7 @@
 
             var u_time = gl.getUniformLocation(shader_light.program, "time");
 
-            position = glMatrix.vec3.fromValues(0, 0, 1.0)
+            position = glMatrix.vec3.fromValues(0.0, 0.0, 1.0)
             up = glMatrix.vec3.fromValues(0.0, 1.0, 0.0)
             yaw = -90.0
             pitch = 100.0
@@ -431,9 +516,25 @@
             var tex_Venusmesh = make_texture(gl, '../textures/venus.jpeg');
             const u_tex_Venusmesh = gl.getUniformLocation(shader_texture.program,'u_texture');
 
-            // Retrieve the adress of the satelite texture
-            //var tex_sat = make_texture(gl, '../textures/mirror.jpeg');
-            //const u_tex_sat = gl.getUniformLocation(shader_texture.program,'u_texture');
+            //Mars texture
+            var tex_Marsmesh = make_texture(gl, '../textures/mars.jpeg');
+            const u_tex_Marsmesh = gl.getUniformLocation(shader_texture.program,'u_texture');
+
+            //Jupiter texture
+            var tex_Jupmesh = make_texture(gl, '../textures/jupiter.jpeg');
+            const u_tex_Jupmesh = gl.getUniformLocation(shader_texture.program,'u_texture');
+
+            //Saturn texture
+            var tex_Satmesh = make_texture(gl, '../textures/saturn.jpeg');
+            const u_tex_Satmesh = gl.getUniformLocation(shader_texture.program,'u_texture');
+
+            //Uranus texture
+            var tex_Uranusmesh = make_texture(gl, '../textures/uranus.jpeg');
+            const u_tex_Uranusmesh = gl.getUniformLocation(shader_texture.program,'u_texture');
+
+            //Neptune texture
+            var tex_Nepmesh = make_texture(gl, '../textures/neptune.jpeg');
+            const u_tex_Nepmesh = gl.getUniformLocation(shader_texture.program,'u_texture');
 
             // We need to send the inverse transpose of the model matrix for the model
             const u_itM = gl.getUniformLocation(shader_refract.program, 'itM');
@@ -447,6 +548,16 @@
             const u_view_dir_light = gl.getUniformLocation(shader_light.program, 'u_view_dir');
             const u_view_dir_tex = gl.getUniformLocation(shader_texture.program, 'u_view_dir');
 
+
+
+            sun_mesh.model = glMatrix.mat4.scale(sun_mesh.model, sun_mesh.model,
+                                                        glMatrix.vec3.fromValues(5.0, 5.0, 5.0));
+                                                        /*
+            mercury_mesh.model = glMatrix.mat4.scale(sun_mesh.model, mercury_mesh.model,
+                                                        glMatrix.vec3.fromValues(0.4, 0.4, 0.4));
+            venus_mesh.model = glMatrix.mat4.scale(venus_mesh.model, sun_mesh.model,
+                                                        glMatrix.vec3.fromValues(0.94, 0.94, 0.94));
+*/
             var deltaTime = 0;
 
             function animate(time) {
@@ -480,7 +591,7 @@
                                                        deltaTime/360,
                                                        glMatrix.vec3.fromValues(1, 1, 1));
           //TEXTURE OBJECTS
-                //Earth
+            //Earth
                 shader_texture.use();
                 var unif2 = shader_texture.get_uniforms();
                 view2 = camera.get_view_matrix();
@@ -501,7 +612,8 @@
                 earth_mesh.draw();
                 gl.uniform3fv(u_view_dir_tex, camera.get_position());
 
-                // Mercury
+
+            // Mercury
                 mercury_mesh.activate(shader_texture);
                 gl.uniformMatrix4fv(unif2['model'], false, mercury_mesh.model);
                 var itM = glMatrix.mat4.create();
@@ -513,8 +625,15 @@
                 gl.bindTexture(gl.TEXTURE_2D, tex_Mercurymesh);
                 gl.uniform1i(u_tex_Mercurymesh, 0);
 
+
+                glMatrix.mat4.rotate(mercury_mesh.model, mercury_mesh.model,
+                                                                        deltaTime/360,
+                                                                         glMatrix.vec3.fromValues(-10.0, 0.0, -10.0));
+
                 mercury_mesh.draw();
                 gl.uniform3fv(u_view_dir_tex, camera.get_position());
+
+
 //*
                 // Venus
                 venus_mesh.activate(shader_texture);
@@ -530,13 +649,82 @@
 
                 venus_mesh.draw();
                 gl.uniform3fv(u_view_dir_tex, camera.get_position());
-//*
 
+                // Mars
+                mars_mesh.activate(shader_texture);
+                gl.uniformMatrix4fv(unif2['model'], false, mars_mesh.model);
+                var itM = glMatrix.mat4.create();
+                itM = glMatrix.mat4.invert(itM, mars_mesh.model);
+                itM = glMatrix.mat4.transpose(itM, itM);
+                gl.uniformMatrix4fv(u_itM_tex, false, itM);
 
-                 earth_mesh.model = glMatrix.mat4.rotate(earth_mesh.model, earth_mesh.model,
-                                                        deltaTime/3600,
-                                                        glMatrix.vec3.fromValues(-10.0, 0.0, -10.0));
-/*/
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, tex_Marsmesh);
+                gl.uniform1i(u_tex_Marsmesh, 0);
+
+                mars_mesh.draw();
+                gl.uniform3fv(u_view_dir_tex, camera.get_position());
+
+                //Jupiter
+                jupiter_mesh.activate(shader_texture);
+                gl.uniformMatrix4fv(unif2['model'], false, jupiter_mesh.model);
+                var itM = glMatrix.mat4.create();
+                itM = glMatrix.mat4.invert(itM, jupiter_mesh.model);
+                itM = glMatrix.mat4.transpose(itM, itM);
+                gl.uniformMatrix4fv(u_itM_tex, false, itM);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, tex_Jupmesh);
+                gl.uniform1i(u_tex_Jupmesh, 0);
+
+                jupiter_mesh.draw();
+                gl.uniform3fv(u_view_dir_tex, camera.get_position());
+
+                //Saturn
+                saturn_mesh.activate(shader_texture);
+                gl.uniformMatrix4fv(unif2['model'], false, saturn_mesh.model);
+                var itM = glMatrix.mat4.create();
+                itM = glMatrix.mat4.invert(itM, saturn_mesh.model);
+                itM = glMatrix.mat4.transpose(itM, itM);
+                gl.uniformMatrix4fv(u_itM_tex, false, itM);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, tex_Satmesh);
+                gl.uniform1i(u_tex_Satmesh, 0);
+
+                saturn_mesh.draw();
+                gl.uniform3fv(u_view_dir_tex, camera.get_position());
+///*
+                //Uranus
+                uranus_mesh.activate(shader_texture);
+                gl.uniformMatrix4fv(unif2['model'], false, uranus_mesh.model);
+                var itM = glMatrix.mat4.create();
+                itM = glMatrix.mat4.invert(itM, uranus_mesh.model);
+                itM = glMatrix.mat4.transpose(itM, itM);
+                gl.uniformMatrix4fv(u_itM_tex, false, itM);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, tex_Uranusmesh);
+                gl.uniform1i(u_tex_Uranusmesh, 0);
+
+                uranus_mesh.draw();
+                gl.uniform3fv(u_view_dir_tex, camera.get_position());
+
+                //Neptune
+                neptune_mesh.activate(shader_texture);
+                gl.uniformMatrix4fv(unif2['model'], false, neptune_mesh.model);
+                var itM = glMatrix.mat4.create();
+                itM = glMatrix.mat4.invert(itM, neptune_mesh.model);
+                itM = glMatrix.mat4.transpose(itM, itM);
+                gl.uniformMatrix4fv(u_itM_tex, false, itM);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, tex_Nepmesh);
+                gl.uniform1i(u_tex_Nepmesh, 0);
+
+                neptune_mesh.draw();
+                gl.uniform3fv(u_view_dir_tex, camera.get_position());
+
 
                 //Moon
                 moon_mesh.activate(shader_texture);
@@ -552,7 +740,7 @@
 
                 moon_mesh.draw();
                 gl.uniform3fv(u_view_dir, camera.get_position());
-/*
+//*
                 moon_mesh.model = glMatrix.mat4.rotate(moon_mesh.model, moon_mesh.model,
                                        deltaTime/3600,
                                        glMatrix.vec3.fromValues(0, 0.01, 0));
@@ -633,6 +821,7 @@
                 gl.uniform1i(u_cubemap, 0);
 
 
+
                 //------DRAWING THE CUBE MAP------
                 //*    // uncomment only one slash "/" to comment the cubemap ;)
                 // We draw the cubemap ONLY at the end!
@@ -656,11 +845,15 @@
                 gl.depthFunc(gl.LESS);
                 //*/
 
+//*
+                //rotation
+
+                                                                        //*/
                 //translation of SPACESHIP
 
                 spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
-                                                                  spaceship_mesh.model,
-                                                              glMatrix.vec3.fromValues(deltaTime/2, 0.0, 0.0));
+                                                              spaceship_mesh.model,
+                                                              glMatrix.vec3.fromValues(0.0, deltaTime/2, 0.0));
 
 
                 camera.show_view_html(camMatElem, camera.get_view_matrix());
