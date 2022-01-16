@@ -4,7 +4,9 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
         FORWARD: 1,
         BACKWARD: 2,
         LEFT: 3,
-        RIGHT: 4
+        RIGHT: 4,
+        UP: 5,
+        DOWN: 6
     }
     var canvas = canvas;
     var position = position;
@@ -42,17 +44,23 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
                 event.view.event.preventDefault();
             }
 
-            if (key === 's' || key === '5' || key === 'u') {
+            if (key === 's' || key === '5' || key === 'u'|| key === 'h') {
                 process_keyboard(CameraMovement.BACKWARD);
                 return;
-            } else if (key === 'z' || key === '8' || key === 'é') {
+            } else if (key === 'z' || key === '8' || key === 'é' || key === 'y') {
                 process_keyboard(CameraMovement.FORWARD);
                 return;
-            } else if (key === 'q' || key === '4' || key === 'a') {
+            } else if (key === 'q' || key === '4' || key === 'a' || key === 'g') {
                 process_keyboard(CameraMovement.LEFT);
                 return;
-            } else if (key === 'd' || key === '6' || key === 'i') {
+            } else if (key === 'd' || key === '6' || key === 'i' || key === 'j') {
                 process_keyboard(CameraMovement.RIGHT);
+                return;
+            }else if (key === 'b') {
+                process_keyboard(CameraMovement.DOWN);
+                return;
+            }else if (key === 'n') {
+                process_keyboard(CameraMovement.UP);
                 return;
             }
 
@@ -136,6 +144,16 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
             tmp = glMatrix.vec3.scale(tmp, right, velocity);
             position = glMatrix.vec3.add(position, position, tmp);
             //position += right + velocity;
+        }
+        if (direction == CameraMovement.UP) {
+            tmp = glMatrix.vec3.scale(tmp, up, velocity);
+            position = glMatrix.vec3.add(position, position, tmp);
+            //position += up + velocity;
+        }
+        if (direction == CameraMovement.DOWN) {
+            tmp = glMatrix.vec3.scale(tmp, up, velocity);
+            position = glMatrix.vec3.sub(position, position, tmp);
+            //position -= up + velocity;
         }
     }
 

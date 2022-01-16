@@ -126,7 +126,7 @@
 
       void main() {
         vec4 frag_coord = M*vec4(position, 1.0);
-        gl_Position = (P*V*frag_coord);
+        gl_Position = (P*frag_coord);
         v_normal = vec3(itM * vec4(normal, 1.0));
         v_frag_coord = frag_coord.xyz;
       }
@@ -418,9 +418,12 @@
             var spaceship_mesh = await make_object(gl, spaceship);
             spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
                                                             spaceship_mesh.model,
-                                                        glMatrix.vec3.fromValues(0.0, -1.0, 7.0));
+                                                        glMatrix.vec3.fromValues(0.0, -1.0, -7.0));
              spaceship_mesh.model = glMatrix.mat4.scale(spaceship_mesh.model, spaceship_mesh.model,
                                                         glMatrix.vec3.fromValues(0.01, 0.01, 0.01));
+            spaceship_mesh.model = glMatrix.mat4.rotate(spaceship_mesh.model, spaceship_mesh.model,
+                                                        3.14,
+                                                        glMatrix.vec3.fromValues(0.0, 1.0, 0.0));
 
             //Sphere3
             var sphere3_mesh = await make_object(gl,obj);
@@ -440,7 +443,7 @@
             const u_light_pos3 = gl.getUniformLocation(shader_bumpmap.program, 'u_light_pos');
             //*/
 
-            position = glMatrix.vec3.fromValues(0, 0, -4.0)
+            position = glMatrix.vec3.fromValues(0, 0.0, -4.0)
             up = glMatrix.vec3.fromValues(0.0, 1.0, 0.0)
             yaw = -90.0
             pitch = 0.0
@@ -559,6 +562,8 @@
                 itM = glMatrix.mat4.transpose(itM, itM);
                 gl.uniformMatrix4fv(u_itM, false, itM);
                 spaceship_mesh.draw();
+
+                
                 //*/
 
                 /* //Third object
@@ -684,6 +689,73 @@
                 ground_mesh.draw();
                 //*/
 
+            //MOVEMENT OF THE SPACESHIP
+            document.addEventListener('keydown', (event) => {
+            const key = event.key;
+            // Remove page scrolling with arrows to handle camera
+            if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
+                event.view.event.preventDefault();
+            }
+            if (key === 'h') {
+                //process_keyboard(CameraMovement.BACKWARD);
+                spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
+                                                                  spaceship_mesh.model,
+                                                              glMatrix.vec3.fromValues(0.0, 0.0, -0.075));
+                return;
+            } else if (key === 'y') {
+                //process_keyboard(CameraMovement.FORWARD);
+                spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
+                                                                  spaceship_mesh.model,
+                                                              glMatrix.vec3.fromValues(0.0, 0.0, 0.075));
+                return;
+            } else if (key === 'g') {
+                //process_keyboard(CameraMovement.LEFT);
+                spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
+                                                                  spaceship_mesh.model,
+                                                              glMatrix.vec3.fromValues(0.075, 0.0, 0.0));
+                return;
+            } else if (key === 'j') {
+                //process_keyboard(CameraMovement.RIGHT);
+                spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
+                                                                  spaceship_mesh.model,
+                                                              glMatrix.vec3.fromValues(-0.075, 0.0, 0.0));
+                return;
+            }else if (key === 'b') {
+                //process_keyboard(CameraMovement.RIGHT);
+                spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
+                                                                  spaceship_mesh.model,
+                                                              glMatrix.vec3.fromValues(0.0, -0.075, 0.0));
+                return;
+            }else if (key === 'n') {
+                //process_keyboard(CameraMovement.RIGHT);
+                spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
+                                                                  spaceship_mesh.model,
+                                                              glMatrix.vec3.fromValues(0.0, 0.075, 0.0));
+                return;
+            }
+            /*
+            else if (key === 'ArrowLeft') {
+                var rotation = glMatrix.vec3.sub(rotation, camera.get_position, glMatrix.vec3.fromValues(0.0, 1.0, 0.0));
+                spaceship_mesh.model = glMatrix.mat4.rotate(spaceship_mesh.model,
+                                                              spaceship_mesh.model,
+                                                              1.57,
+                                                              rotation);
+                spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
+                                                                  spaceship_mesh.model,
+                                                              glMatrix.vec3.fromValues(0.075, 0.0, 0.0));
+                return;
+            }else if (key === 'ArrowRight') {
+                //process_keyboard(CameraMovement.RIGHT);
+                spaceship_mesh.model = glMatrix.mat4.rotate(spaceship_mesh.model,
+                                                              spaceship_mesh.model,
+                                                              -0.057,
+                                                              glMatrix.vec3.fromValues(0.0, 1.0, 0.0));
+                return;
+            }*/
+
+        }, false);
+
+                
 
 
                 //------DRAWING THE CUBE MAP------
