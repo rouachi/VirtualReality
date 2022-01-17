@@ -6,7 +6,7 @@
 
 <body>
   <button>Click</button>
-    <h1>Project: Rym Ouachi & Margaux Mannaerts</h1>
+
     <canvas id="webgl_canvas" width="1400" height="800"></canvas>
     <div id="fps"></div>
     <div id="camera_mat"></div>
@@ -18,6 +18,8 @@
     <script language="javascript" type="text/javascript" src="textures_08.js"></script>
     <script language="javascript" type="text/javascript" src="objects_02.js"></script>
     <script>
+
+    //<h1>Project: Rym Ouachi & Margaux Mannaerts</h1>
         async function main() {
             // Boilerplate code
             const canvas = document.getElementById('webgl_canvas');
@@ -179,49 +181,79 @@
             `;
 
             const sourceF = `
-              precision mediump float;
-              varying vec3 v_normal;
-              varying vec3 v_frag_coord;
+            precision mediump float;
+            varying vec3 v_normal;
+            varying vec3 v_frag_coord;
 
-              uniform vec3 u_light_pos;
-              uniform vec3 u_light_pos2;
-              uniform vec3 u_view_dir;
-              uniform float time;
+            uniform vec3 u_light_pos;
+            uniform vec3 u_light_pos2;
+            uniform vec3 u_light_pos3;
+            uniform vec3 u_view_dir;
+            uniform float time;
 
-              void main() {
-                vec3 normal = normalize(v_normal);
+            //attenuation factors
+            float att1; //attenuation factor 1
+            float att2; //attenuation factor 2
+            float att3; //attenuation factor 3
+            float c = 1.0; //constant attenuation
+            float l = 0.2; //linear attenuation
+            float q = 0.01; //quadratic attenuation
 
-                // light color
-                vec3 light_color = vec3(0.0, 0.0, 1.0);
-                vec3 light_color2 = vec3(0.0, 0.0, 0.7);
+            void main() {
+              vec3 normal = normalize(v_normal);
 
-                // Ambient
-                float ambient = 0.1;
+              // light color
+              vec3 light_color = vec3(0.4, 0.0, 0.8);
+              vec3 light_color2 = vec3(0.2, 0.6, 1.0);
+              vec3 light_color3 = vec3(1.0, 1.0, 0.0);
 
-                vec3 L = normalize(u_light_pos - v_frag_coord);
-                vec3 L2 = normalize(u_light_pos2 - v_frag_coord);
+              // Ambient
+              float ambient = 0.1;
 
-                // Diffuse
-                float diffusion = max(0.0, dot(v_normal, L));
-                float diffusion2 = max(0.0, dot(v_normal, L2));
+              vec3 L = normalize(u_light_pos - v_frag_coord);
+              vec3 L2 = normalize(u_light_pos2 - v_frag_coord);
+              vec3 L3 = normalize(u_light_pos3 - v_frag_coord);
 
-                // specural
-                float spec_strength = 0.8;
-                vec3 view_dir = normalize(u_view_dir - v_frag_coord);
-                vec3 reflect_dir = reflect(-L, normal);
-                float spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
-                float specular = spec_strength * spec;
+              // Diffuse
+              float diffusion = max(0.0, dot(v_normal, L));
+              float diffusion2 = max(0.0, dot(v_normal, L2));
+              float diffusion3 = max(0.0, dot(v_normal, L3));
 
-                vec3 reflect_dir2 = reflect(-L2, normal);
-                float spec2 = pow(max(dot(view_dir, reflect_dir2), 0.0), 32.0);
-                float specular2 = spec_strength * spec2;
+              // specural
+              float spec_strength = 0.8;
+              vec3 view_dir = normalize(u_view_dir - v_frag_coord);
+              vec3 reflect_dir = reflect(-L, normal);
+              float spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
+              float specular = spec_strength * spec;
 
-                //vec3 color = (ambient + specular + diffusion) * light_color;
-                vec3 color = (ambient + specular + diffusion) * light_color + (ambient + specular2 + diffusion2) * light_color2;
+              vec3 reflect_dir2 = reflect(-L2, normal);
+              float spec2 = pow(max(dot(view_dir, reflect_dir2), 0.0), 32.0);
+              float specular2 = spec_strength * spec2;
 
-                float cst = mod(time, 1.0);
-                gl_FragColor = vec4(color, 1.0);
-              }
+              vec3 reflect_dir3 = reflect(-L3, normal);
+              float spec3 = pow(max(dot(view_dir, reflect_dir3), 0.0), 32.0);
+              float specular3 = spec_strength * spec3;
+
+              //Attenuation factor
+              float d1 = distance(u_light_pos, v_frag_coord);
+              att1 = 1.0 / (c + l*d1 + q*d1*d1);
+
+              float d2 = distance(u_light_pos2, v_frag_coord);
+              att2 = 1.0 / (c + l*d2 + q*d2*d2);
+
+              float d3 = distance(u_light_pos3, v_frag_coord);
+              att3 = 1.0 / (c + l*d3 + q*d3*d3);
+
+
+              //vec3 color = (ambient + specular + diffusion) * light_color;
+              //vec3 color = ambient + (specular + diffusion) * att1 * light_color + (specular2 + diffusion2) * att2 * light_color2;
+              //vec3 color = ambient + (specular + diffusion) * light_color + (specular2 + diffusion2) * light_color2;
+              vec3 color = ambient + (specular + diffusion) * att1 * light_color + (specular2 + diffusion2) * att2 * light_color2 + (specular3 + diffusion3) * att3 * light_color3;
+
+
+              float cst = mod(time, 1.0);
+              gl_FragColor = vec4(color, 1.0)*cst;
+            }
               `;
 
 //TEXTURE SHADERS
@@ -340,117 +372,120 @@
                 //vec3 color = (ambient + specular + diffusion) * light_color + (ambient + specular2 + diffusion2) * light_color2;
 
                 float cst = mod(time, 1.0);
-                gl_FragColor = texture*0.5 + vec4(color, 1.0)*0.5;
+                gl_FragColor = texture*0.8 + vec4(color, 1.0)*0.2;
                 //gl_FragColor = texture;
                 //gl_FragColor = vec4(color, 1.0);
 
         		  }
           		`;
 
-            //*
-            const source_Bump_V = `
+//TEXTURE BUMP MAPPING
+          const source_Bump_V = `
+            attribute vec3 position;
+            attribute vec2 texcoord;
+            varying vec4 v_texcoord;
 
+            attribute vec3 tangent;
+            attribute vec3 bitangent;
+            varying mat3 TBN;
 
-          		  attribute vec3 position;
-          		  attribute vec2 texcoord;
-          		  varying vec4 v_texcoord;
+            //ADDED FROM LIGHT
+            attribute vec3 normal;
+            varying vec3 v_normal;
+            varying vec3 v_frag_coord; //it's kind of the same as v_texcoord
 
-                attribute vec3 tangent;
-                attribute vec3 bitangent;
-                varying mat3 TBN;
+            uniform mat4 M;
+            uniform mat4 itM;  // inverse transpose model!
+            uniform mat4 V;
+            uniform mat4 P;
 
-                //ADDED FROM LIGHT
-                attribute vec3 normal;
-                varying vec3 v_normal;
-                varying vec3 v_frag_coord; //it's kind of the same as v_texcoord
+            void main() {
+              vec3 T = normalize(vec3(M * vec4(tangent, 0.0)));
+              vec3 B = normalize(vec3(M * vec4(bitangent, 0.0)));
+              vec3 N = normalize(vec3(M * vec4(normal, 0.0)));
+              mat3 TBN = mat3(T, B, N);
 
-          		  uniform mat4 M;
-                uniform mat4 itM;  // inverse transpose model!
-          		  uniform mat4 V;
-          		  uniform mat4 P;
+              gl_Position = P*M*V*vec4(position, 1);
+              v_texcoord = vec4(position,1);
 
-          		  void main() {
-                  vec3 T = normalize(vec3(M * vec4(tangent, 0.0)));
-                  vec3 B = normalize(vec3(M * vec4(bitangent, 0.0)));
-                  vec3 N = normalize(vec3(M * vec4(normal, 0.0)));
-                  mat3 TBN = mat3(T, B, N);
+              //LIGHT
+              vec4 frag_coord = M*vec4(position, 1.0);
+              //gl_Position = P*V*frag_coord;
+              // Transform correctly the normals!
+              v_normal = vec3(itM * vec4(normal, 1.0));
 
-                  gl_Position = P*M*V*vec4(position, 1);
-                  v_texcoord = vec4(position,1);
+              v_frag_coord = frag_coord.xyz;
 
-                  //LIGHT
-                  vec4 frag_coord = M*vec4(position, 1.0);
-                  //gl_Position = P*V*frag_coord;
-                  // Transform correctly the normals!
-                  v_normal = vec3(itM * vec4(normal, 1.0));
-
-                  v_frag_coord = frag_coord.xyz;
-
-          		  }
+            }
           		`;
 
-            const source_Bump_F = `
-                precision mediump float;
-                varying vec4 v_texcoord;
+          const source_Bump_F = `
+            precision mediump float;
+            varying vec4 v_texcoord;
 
-                uniform sampler2D u_texture;
-                //BUMP:
-                uniform sampler2D u_normalMap;
-                varying mat3 TBN;
+            uniform sampler2D u_texture;
+            //BUMP:
+            uniform sampler2D u_normalMap;
+            varying mat3 TBN;
 
-                //_____LIGHT_____
-                varying vec3 v_normal;
-                varying vec3 v_frag_coord; //kind of same as v_texcoord
+            //_____LIGHT_____
+            varying vec3 v_normal;
+            varying vec3 v_frag_coord; //kind of same as v_texcoord
 
-                uniform vec3 u_light_pos;
-                uniform vec3 u_view_dir;
-                uniform float time;
+            uniform vec3 u_light_pos;
+            uniform vec3 u_view_dir;
+            uniform float time;
 
-                void main() {
-                  //vec2 longitudeLatitude = vec2((atan(v_frag_coord.y, v_frag_coord.x) / 3.1415926 + 1.0) * 0.5,
-                   //                         (asin(v_frag_coord.z) / 3.1415926 + 0.5));
-                  vec2 longitudeLatitude = vec2((atan(v_texcoord.y, v_texcoord.x) / 3.1415926 + 1.0) * 0.5,
-                                            (asin(v_texcoord.z) / 3.1415926 + 0.5));
-                  vec4 texture = texture2D(u_texture, longitudeLatitude);
-                  //gl_FragColor = texture2D(u_texture, longitudeLatitude);
+            void main() {
+              //vec2 longitudeLatitude = vec2((atan(v_frag_coord.y, v_frag_coord.x) / 3.1415926 + 1.0) * 0.5,
+               //                         (asin(v_frag_coord.z) / 3.1415926 + 0.5));
+              vec2 longitudeLatitude = vec2((atan(v_texcoord.y, v_texcoord.x) / 3.1415926 + 1.0) * 0.5,
+                                        (asin(v_texcoord.z) / 3.1415926 + 0.5));
+              vec4 texture = texture2D(u_texture, longitudeLatitude);
+              //gl_FragColor = texture2D(u_texture, longitudeLatitude);
 
-                  //BUMP MAP
-                  vec3 normal = texture2D(u_normalMap, longitudeLatitude).rgb;
-                  normal = normalize(v_normal * 2.0 - 1.0);
-                  normal = normalize(TBN * normal);
-                  //_________LIGHT______________
+              //BUMP MAP
+              vec3 normal = texture2D(u_normalMap, longitudeLatitude).rgb;
+              normal = normalize(normal * 2.0 - 1.0);
+              //normal = normalize(TBN * normal);
+              //_________LIGHT______________
 
-                  //vec3 normal = normalize(v_normal);
+              //vec3 normal = normalize(v_normal);
 
-                  // light color
-                  vec3 light_color = vec3(1.0, 1.0, 1.0);
+              // light color
+              vec3 light_color = vec3(1.0, 1.0, 1.0);
 
-                  // Ambient
-                  float ambient = 0.1;
+              // Ambient
+              float ambient = 0.1;
 
-                  vec3 L = normalize(u_light_pos - v_frag_coord);
+              vec3 L = normalize(u_light_pos - v_frag_coord);
 
-                  // Diffuse
-                  float diffusion = max(0.0, dot(normal, L));
+              // Diffuse
+              float diffusion = max(0.0, dot(normal, L));
 
-                  // specural
-                  float spec_strength = 0.5;
-                  vec3 view_dir = normalize(u_view_dir - v_frag_coord);
-                  vec3 reflect_dir = reflect(-L, normal);
-                  float spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
-                  float specular = spec_strength * spec;
+              // specural
+              float spec_strength = 0.5;
+              vec3 view_dir = normalize(u_view_dir - v_frag_coord);
+              vec3 reflect_dir = reflect(-L, normal);
+              float spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
+              float specular = spec_strength * spec;
 
-                  vec3 color = (ambient + specular + diffusion) * light_color;
-                  //vec3 color = (ambient + specular + diffusion) * light_color + (ambient + specular2 + diffusion2) * light_color2;
+              //cos theta
+              float dotprod = max(0.0, dot(L, normal));
+              float costheta = dotprod / (length(u_light_pos)*length(normal));
 
-                  float cst = mod(time, 1.0);
+              //SUM
+              vec3 color = ambient + (specular + diffusion) * light_color; //* costheta;
+              //vec3 color = (ambient + specular + diffusion) * light_color + (ambient + specular2 + diffusion2) * light_color2;
+
+              float cst = mod(time, 1.0);
 
 
-                  gl_FragColor = texture*0.5 + vec4(color, 1.0)*0.5;
-                  //gl_FragColor = texture;
-                  //gl_FragColor = vec4(color, 1.0);
+              gl_FragColor = texture*0.5 + vec4(color, 1.0)*0.5;
+              //gl_FragColor = texture;
+              //gl_FragColor = vec4(color, 1.0);
 
-                }
+            }
                 `;
 
             //------MAKING THE SHADERS------
@@ -469,82 +504,84 @@
             var cube_mesh = await make_object(gl, cube);
 
             cube_mesh.model = glMatrix.mat4.scale(cube_mesh.model, cube_mesh.model,
-                       glMatrix.vec3.fromValues(5, 5, 5));
+                       glMatrix.vec3.fromValues(20.0, 20.0, 20.0));
 
             var sphere = await load_obj('../objects/sphere_smooth.obj');
-
+            var earth_mesh = await make_object(gl,sphere);
   //Sun
             var sun_mesh = await make_object(gl,sphere);
             sun_mesh.model = glMatrix.mat4.translate(sun_mesh.model,
                                                          sun_mesh.model,
-                                                         glMatrix.vec3.fromValues(0.0, 0.0, 0.0)); //(horizontal, up/down, dist from sun)
+                                                         glMatrix.vec3.fromValues(0.0, 0.0, -20.0)); //(horizontal, up/down, dist from sun)
 
+           var flash_mesh = await make_object(gl,sphere);
+           flash_mesh.model = glMatrix.mat4.translate(flash_mesh.model,
+                                                        flash_mesh.model,
+                                                        glMatrix.vec3.fromValues(3.0, 3.0, 15.0));
   //Mercury
             var mercury_mesh = await make_object(gl,sphere);
             mercury_mesh.model = glMatrix.mat4.translate(mercury_mesh.model,
                                                        sun_mesh.model,
-                                                       glMatrix.vec3.fromValues(-6.0, 0.0, 10.0));
+                                                       glMatrix.vec3.fromValues(0.0, 0.0, 10.0));
 
    //Venus
           var venus_mesh = await make_object(gl, sphere);
           venus_mesh.model = glMatrix.mat4.translate(venus_mesh.model,
                                                       sun_mesh.model,
-                                                      glMatrix.vec3.fromValues(0.0, 0.0, 15.0));
+                                                      glMatrix.vec3.fromValues(0.0, -1.0, 12.0));
 
 
   //Earth
             var earth_mesh = await make_object(gl, sphere);
             earth_mesh.model = glMatrix.mat4.translate(earth_mesh.model,
                                                         sun_mesh.model,
-                                                        glMatrix.vec3.fromValues(0.0, 0.0, 20.0));
+                                                        glMatrix.vec3.fromValues(0.0, 2.0, 18.0));
+//Moon
+           var moon_mesh = await make_object(gl, sphere);
+           moon_mesh.model = glMatrix.mat4.translate(moon_mesh.model,
+                                                       sun_mesh.model,
+                                                       glMatrix.vec3.fromValues(-1.0, 4.0, 18.0));
 
   //Mars
             var mars_mesh = await make_object(gl, sphere);
-            mars_mesh.model = glMatrix.mat4.scale(mars_mesh.model, mars_mesh.model,
-                                                       glMatrix.vec3.fromValues(0.54, 0.54, 0.54));
+
             mars_mesh.model = glMatrix.mat4.translate(mars_mesh.model,
                                                       sun_mesh.model,
-                                                      glMatrix.vec3.fromValues(0.0, 0.0, 25.0));
+                                                      glMatrix.vec3.fromValues(0.0, -3.0, 22.0));
 
   //Jupiter
             var jupiter_mesh = await make_object(gl, sphere);
             jupiter_mesh.model = glMatrix.mat4.translate(jupiter_mesh.model,
                                                       sun_mesh.model,
-                                                      glMatrix.vec3.fromValues(0.0, 0.0, 30.0));
+                                                      glMatrix.vec3.fromValues(0.0, 1.0, 27.0));
 
   //Saturn
             var saturn_mesh = await make_object(gl, sphere);
             saturn_mesh.model = glMatrix.mat4.translate(saturn_mesh.model,
                                                       sun_mesh.model,
-                                                      glMatrix.vec3.fromValues(0.0, 0.0, 35.0));
+                                                      glMatrix.vec3.fromValues(0.0, -2.5, 30.0));
 
   //Uranus
             var uranus_mesh = await make_object(gl, sphere);
             uranus_mesh.model = glMatrix.mat4.translate(uranus_mesh.model,
                                                       sun_mesh.model,
-                                                      glMatrix.vec3.fromValues(0.0, 0.0, 40.0));
+                                                      glMatrix.vec3.fromValues(0.0, 0.0, 34.0));
 
   //Neptune
             var neptune_mesh = await make_object(gl, sphere);
             neptune_mesh.model = glMatrix.mat4.translate(neptune_mesh.model,
                                                       sun_mesh.model,
-                                                      glMatrix.vec3.fromValues(0.0, 0.0, 45.0));
-
-
-  //Moon
-            var moon_mesh = await make_object(gl, sphere)
-            moon_mesh.model = glMatrix.mat4.scale(moon_mesh.model, moon_mesh.model,
-                                                       glMatrix.vec3.fromValues(0.1, 0.1, 0.1));
+                                                      glMatrix.vec3.fromValues(0.0, 1.0, 37.0));
 
 
   //Satelite
             var sat = await load_obj('../objects/sat.obj');
             var sat_mesh = await make_object(gl, sat)
-            sat_mesh.model = glMatrix.mat4.translate(sat_mesh.model,
-                                                        sat_mesh.model,
-                                                        glMatrix.vec3.fromValues(-0.5, 2.0, 1.0));
             sat_mesh.model = glMatrix.mat4.scale(sat_mesh.model, sat_mesh.model,
                                                        glMatrix.vec3.fromValues(0.001, 0.001, 0.001));
+            sat_mesh.model = glMatrix.mat4.translate(sat_mesh.model,
+                                                        sat_mesh.model,
+                                                        glMatrix.vec3.fromValues(-0.5, 2.0, -20.0));
 
 
 
@@ -553,7 +590,7 @@
             var spaceship_mesh = await make_object(gl, spaceship);
             spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
                                                             spaceship_mesh.model,
-                                                        glMatrix.vec3.fromValues(0.0, -1.0, -7.0));
+                                                        glMatrix.vec3.fromValues(0.0, -1.0, -3.0));
              spaceship_mesh.model = glMatrix.mat4.scale(spaceship_mesh.model, spaceship_mesh.model,
                                                         glMatrix.vec3.fromValues(0.01, 0.01, 0.01));
             spaceship_mesh.model = glMatrix.mat4.rotate(spaceship_mesh.model, spaceship_mesh.model,
@@ -582,26 +619,29 @@
 
             //------MAKE THE LIGHTS------
             //* // We define a light in space and retrieve its ID in the shader
-            const light_pos = glMatrix.vec3.fromValues(0.0, 0.0, -10.0);
+            const light_pos = glMatrix.vec3.fromValues(1.0, -1.6, -5.0);
             const u_light_pos = gl.getUniformLocation(shader_light.program, 'u_light_pos');
 
-            const light_pos2 = glMatrix.vec3.fromValues(1.0, -1.6, -5);
+            const light_pos2 = glMatrix.vec3.fromValues(15.0, 6.6, -15.0);
             const u_light_pos2 = gl.getUniformLocation(shader_light.program, 'u_light_pos2');
+
+            const light_pos3 = glMatrix.vec3.fromValues(-25.0, 0.0, -25.0);
+            const u_light_pos3 = gl.getUniformLocation(shader_light.program, 'u_light_pos3');
 
             const light_pos_tex = glMatrix.vec3.fromValues(0.0, 0.0, -10.0);
             const u_light_pos_tex = gl.getUniformLocation(shader_lighttex.program, 'u_light_pos');
 
-            const light_pos_bump = glMatrix.vec3.fromValues(0.0, 0.0, -10.0);
+            const light_pos_bump = glMatrix.vec3.fromValues(10.0, 10.0, -10.0);
             const u_light_pos_bump = gl.getUniformLocation(shader_bump.program, 'u_light_pos');
 
             var u_time = gl.getUniformLocation(shader_light.program, "time");
             var u_time_lightTex = gl.getUniformLocation(shader_lighttex.program, "time");
             var u_time_bump = gl.getUniformLocation(shader_bump.program, "time");
 
-            position = glMatrix.vec3.fromValues(0.0, 0.0, 1.0)
+            position = glMatrix.vec3.fromValues(-3.0, 0.0, -5.0)
             up = glMatrix.vec3.fromValues(0.0, 1.0, 0.0)
             yaw = -90.0
-            pitch = 100.0
+            pitch = 0.0
             var camera = make_camera(canvas, position, up, yaw, pitch)
             var projection = camera.get_projection(45.0, c_width / c_height, 0.01, 100.0)
 
@@ -618,9 +658,12 @@
             const u_tex_mesh1 = gl.getUniformLocation(shader_lighttex.program,'u_texture');
 
             // Retrieve the adress of the sphere2 texture
-            var tex_mesh2 = make_texture(gl, '../textures/earthmap.jpg');
-            const u_tex_mesh2 = gl.getUniformLocation(shader_lighttex.program,'u_texture');
+            var tex_Earthmesh = make_texture(gl, '../textures/earthmap.jpg');
+            const u_tex_Earthmesh = gl.getUniformLocation(shader_bump.program,'u_texture');
 
+            var texnormal_Earthmesh = make_texture(gl, '../textures/earthbump.jpg');
+            const u_texnormal_Earthmesh = gl.getUniformLocation(shader_bump.program,'u_normalMap');
+//*/
             //sun texture
 
             var tex_mesh3 = make_texture(gl, '../textures/sun.jpeg');
@@ -670,16 +713,31 @@
             const u_view_dir_tex = gl.getUniformLocation(shader_lighttex.program, 'u_view_dir');
             const u_view_dir_bump = gl.getUniformLocation(shader_bump.program, 'u_view_dir');
 
+            //var earth_mesh =  createPlanet(earth_mesh, earth_position,earth_scale , shader_lighttex);
 
 
             sun_mesh.model = glMatrix.mat4.scale(sun_mesh.model, sun_mesh.model,
+                                                        glMatrix.vec3.fromValues(10.0, 10.0, 10.0));
+            saturn_mesh.model = glMatrix.mat4.scale(saturn_mesh.model, saturn_mesh.model,
                                                         glMatrix.vec3.fromValues(5.0, 5.0, 5.0));
-                                                        /*
-            mercury_mesh.model = glMatrix.mat4.scale(sun_mesh.model, mercury_mesh.model,
-                                                        glMatrix.vec3.fromValues(0.4, 0.4, 0.4));
-            venus_mesh.model = glMatrix.mat4.scale(venus_mesh.model, sun_mesh.model,
-                                                        glMatrix.vec3.fromValues(0.94, 0.94, 0.94));
-*/
+            jupiter_mesh.model = glMatrix.mat4.scale(jupiter_mesh.model, jupiter_mesh.model,
+                                                        glMatrix.vec3.fromValues(6.0, 6.0, 6.0));
+                                                        //*
+            mercury_mesh.model = glMatrix.mat4.scale(mercury_mesh.model, mercury_mesh.model,
+                                                        glMatrix.vec3.fromValues(0.5, 0.5, 0.5));
+            earth_mesh.model = glMatrix.mat4.scale(earth_mesh.model, earth_mesh.model,
+                                                        glMatrix.vec3.fromValues(2.0, 2.0, 2.0));
+            uranus_mesh.model = glMatrix.mat4.scale(uranus_mesh.model, uranus_mesh.model,
+                                                        glMatrix.vec3.fromValues(4.0, 4.0, 4.0));
+            neptune_mesh.model = glMatrix.mat4.scale(neptune_mesh.model, neptune_mesh.model,
+                                                        glMatrix.vec3.fromValues(3.0, 3.0, 3.0));
+
+            moon_mesh.model = glMatrix.mat4.scale(moon_mesh.model, moon_mesh.model,
+                                                       glMatrix.vec3.fromValues(0.1, 0.1, 0.1));
+
+           flash_mesh.model = glMatrix.mat4.scale(flash_mesh.model, flash_mesh.model,
+                                                      glMatrix.vec3.fromValues(0.5, 0.5, 0.5));
+//*/
             var deltaTime = 0;
 
             function animate(time) {
@@ -691,6 +749,7 @@
 
 
                 //------DRAWING OF THE SCENE------
+
 
           //REFRACTION OBJECTS
                 shader_refract.use();
@@ -712,30 +771,62 @@
                 asteroid_mesh1.model = glMatrix.mat4.rotate(asteroid_mesh1.model, asteroid_mesh1.model,
                                                        deltaTime/360,
                                                        glMatrix.vec3.fromValues(1, 1, 1));
-          //TEXTURE OBJECTS
-            //Earth
-                shader_lighttex.use();
-                var unif2 = shader_lighttex.get_uniforms();
-                view2 = camera.get_view_matrix();
-                gl.uniformMatrix4fv(unif2['view'], false, view2);
-                gl.uniformMatrix4fv(unif2['proj'], false, projection);
 
-                earth_mesh.activate(shader_lighttex);
-                gl.uniformMatrix4fv(unif2['model'], false, earth_mesh.model);
-                var itM = glMatrix.mat4.create();
-                itM = glMatrix.mat4.invert(itM, earth_mesh.model);
-                itM = glMatrix.mat4.transpose(itM, itM);
-                gl.uniformMatrix4fv(u_itM_tex, false, itM);
+               sat_mesh.activate(shader_refract);
+               gl.uniformMatrix4fv(unif['model'], false, sat_mesh.model);
+               var itM = glMatrix.mat4.create();
+               itM = glMatrix.mat4.invert(itM, sat_mesh.model);
+               itM = glMatrix.mat4.transpose(itM, itM);
+               gl.uniformMatrix4fv(u_itM, false, itM);
+               sat_mesh.draw();
+               gl.uniform3fv(u_view_dir, camera.get_position());
 
-                gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, tex_mesh2);
-                gl.uniform1i(u_tex_mesh2, 0);
 
+               //BUMP MAP
+
+               shader_bump.use();
+               var unif5 = shader_bump.get_uniforms();
+               view5 = camera.get_view_matrix();
+               gl.uniformMatrix4fv(unif5['view'], false, view5);
+               gl.uniformMatrix4fv(unif5['proj'], false, projection);
+               gl.uniform3fv(u_light_pos_bump, light_pos_bump);
+               gl.uniform3fv(u_view_dir_bump, camera.get_position());
+
+
+             //Earth
+               earth_mesh.activate(shader_bump);
+               gl.uniformMatrix4fv(unif5['model'], false, earth_mesh.model);
+               var itM = glMatrix.mat4.create();
+               itM = glMatrix.mat4.invert(itM, earth_mesh.model);
+               itM = glMatrix.mat4.transpose(itM, itM);
+               gl.uniformMatrix4fv(u_itM_bump, false, itM);
+               gl.uniform1f(u_time_bump, deltaTime);
+
+               //gl.activeTexture(gl.TEXTURE0);
+               gl.bindTexture(gl.TEXTURE_2D, texnormal_Earthmesh);
+               gl.uniform1i(u_texnormal_Earthmesh, 0);
+               gl.activeTexture(gl.TEXTURE0);
+               gl.bindTexture(gl.TEXTURE_2D, tex_Earthmesh);
+               gl.uniform1i(u_tex_Earthmesh, 0);
+
+                earth_mesh.model = glMatrix.mat4.rotate(earth_mesh.model, earth_mesh.model,
+                                                       deltaTime/3600,
+                                                       glMatrix.vec3.fromValues(1, 1, 1));
                 earth_mesh.draw();
-                gl.uniform3fv(u_view_dir_tex, camera.get_position());
+                gl.uniform3fv(u_view_dir_bump, camera.get_position());
 
 
+//TEXTURE OBJECTS
             // Mercury
+
+            shader_lighttex.use();
+            var unif2 = shader_lighttex.get_uniforms();
+            view2 = camera.get_view_matrix();
+            gl.uniformMatrix4fv(unif2['view'], false, view2);
+            gl.uniformMatrix4fv(unif2['proj'], false, projection);
+            gl.uniform3fv(u_light_pos_tex, light_pos_tex);
+            gl.uniform3fv(u_view_dir_tex, camera.get_position());
+
                 mercury_mesh.activate(shader_lighttex);
                 gl.uniformMatrix4fv(unif2['model'], false, mercury_mesh.model);
                 var itM = glMatrix.mat4.create();
@@ -749,7 +840,7 @@
 
 
                 glMatrix.mat4.rotate(mercury_mesh.model, mercury_mesh.model,
-                                                                        deltaTime/360,
+                                                                        deltaTime/3600,
                                                                          glMatrix.vec3.fromValues(-10.0, 0.0, -10.0));
 
                 mercury_mesh.draw();
@@ -769,6 +860,10 @@
                 gl.bindTexture(gl.TEXTURE_2D, tex_Venusmesh);
                 gl.uniform1i(u_tex_Venusmesh, 0);
 
+                glMatrix.mat4.rotate(venus_mesh.model,venus_mesh.model,
+                                                                        deltaTime/3600,
+                                                                         glMatrix.vec3.fromValues(-10.0, 0.0, -10.0));
+
                 venus_mesh.draw();
                 gl.uniform3fv(u_view_dir_tex, camera.get_position());
 
@@ -783,6 +878,10 @@
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, tex_Marsmesh);
                 gl.uniform1i(u_tex_Marsmesh, 0);
+
+                mars_mesh.model = glMatrix.mat4.rotate(mars_mesh.model, mars_mesh.model,
+                                                       deltaTime/3600,
+                                                       glMatrix.vec3.fromValues(2, 2, 2));
 
                 mars_mesh.draw();
                 gl.uniform3fv(u_view_dir_tex, camera.get_position());
@@ -799,6 +898,10 @@
                 gl.bindTexture(gl.TEXTURE_2D, tex_Jupmesh);
                 gl.uniform1i(u_tex_Jupmesh, 0);
 
+                jupiter_mesh.model = glMatrix.mat4.rotate(jupiter_mesh.model, jupiter_mesh.model,
+                                                       deltaTime/3600,
+                                                       glMatrix.vec3.fromValues(10, 7, 10));
+
                 jupiter_mesh.draw();
                 gl.uniform3fv(u_view_dir_tex, camera.get_position());
 
@@ -814,6 +917,9 @@
                 gl.bindTexture(gl.TEXTURE_2D, tex_Satmesh);
                 gl.uniform1i(u_tex_Satmesh, 0);
 
+                saturn_mesh.model = glMatrix.mat4.rotate(saturn_mesh.model, saturn_mesh.model,
+                                                       deltaTime/3600,
+                                                       glMatrix.vec3.fromValues(0.0, 1.0, 3.0));
                 saturn_mesh.draw();
                 gl.uniform3fv(u_view_dir_tex, camera.get_position());
 ///*
@@ -829,6 +935,10 @@
                 gl.bindTexture(gl.TEXTURE_2D, tex_Uranusmesh);
                 gl.uniform1i(u_tex_Uranusmesh, 0);
 
+                uranus_mesh.model = glMatrix.mat4.rotate(uranus_mesh.model, uranus_mesh.model,
+                                                       deltaTime/3600,
+                                                       glMatrix.vec3.fromValues(1, 1, 1));
+
                 uranus_mesh.draw();
                 gl.uniform3fv(u_view_dir_tex, camera.get_position());
 
@@ -843,6 +953,10 @@
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, tex_Nepmesh);
                 gl.uniform1i(u_tex_Nepmesh, 0);
+
+                neptune_mesh.model = glMatrix.mat4.rotate(neptune_mesh.model, neptune_mesh.model,
+                                                       deltaTime/3600,
+                                                       glMatrix.vec3.fromValues(2.0, 6.0, 1.0));
 
                 neptune_mesh.draw();
                 gl.uniform3fv(u_view_dir_tex, camera.get_position());
@@ -899,11 +1013,6 @@
                 spaceship_mesh.draw();
                 gl.uniform3fv(u_view_dir_ref, camera.get_position());
 
-/*
-                spaceship_mesh.model = glMatrix.mat4.rotate(spaceship_mesh.model, earth_mesh.model,
-                                                       deltaTime/3600,
-                                                       glMatrix.vec3.fromValues(1, 1, 0));
-*/
           //LIGHT OBJECTS
                 shader_light.use();
                 var unif3 = shader_light.get_uniforms();
@@ -913,6 +1022,23 @@
                 // Send the light position to the shader
                 gl.uniform3fv(u_light_pos, light_pos);
                 gl.uniform3fv(u_light_pos2, light_pos2);
+                gl.uniform3fv(u_light_pos3, light_pos3);
+
+                flash_mesh.activate(shader_light);
+                // Only the model matrix changes!
+                gl.uniformMatrix4fv(unif3['model'], false, flash_mesh.model);
+                var itM = glMatrix.mat4.create();
+                itM = glMatrix.mat4.invert(itM, flash_mesh.model);
+                itM = glMatrix.mat4.transpose(itM, itM);
+                gl.uniformMatrix4fv(u_itM_light, false, itM);
+                gl.uniform1f(u_time, deltaTime);
+
+                flash_mesh.model = glMatrix.mat4.rotate(flash_mesh.model,flash_mesh.model,
+                                       deltaTime/3600,
+                                       glMatrix.vec3.fromValues(0, 0.01, 0));
+
+                flash_mesh.draw();
+                gl.uniform3fv(u_view_dir_light, camera.get_position());
 
 
                 // Add the viewer position
@@ -921,20 +1047,6 @@
                 gl.uniform3fv(u_view_dir_light, camera.get_position());
 
 
-                sat_mesh.activate(shader_light);
-                gl.uniformMatrix4fv(unif3['model'], false, sat_mesh.model);
-                var itM = glMatrix.mat4.create();
-                itM = glMatrix.mat4.invert(itM, sat_mesh.model);
-                itM = glMatrix.mat4.transpose(itM, itM);
-                gl.uniformMatrix4fv(u_itM_light, false, itM);
-                gl.uniform1f(u_time, deltaTime);
-                sat_mesh.draw();
-                gl.uniform3fv(u_view_dir_light, camera.get_position());
-
-
-                sat_mesh.model = glMatrix.mat4.rotate(sat_mesh.model, sat_mesh.model,
-                                                       deltaTime/3600,
-                                                       glMatrix.vec3.fromValues(0.005, 0.05, 0.005));
 
                 // Activating textures
 
@@ -967,17 +1079,11 @@
                 gl.depthFunc(gl.LESS);
                 //*/
 
-//*
-                //rotation
 
-                                                                        //*/
-                //translation of SPACESHIP
-/*
-                spaceship_mesh.model = glMatrix.mat4.translate(spaceship_mesh.model,
-                                                              spaceship_mesh.model,
-                                                              glMatrix.vec3.fromValues(0.0, deltaTime/2, 0.0));
+                sat_mesh.model = glMatrix.mat4.rotate(sat_mesh.model, sat_mesh.model,
+                                                       deltaTime/3600,
+                                                       glMatrix.vec3.fromValues(0.005, 0.05, 0.005));
 
-*/
                 camera.show_view_html(camMatElem, camera.get_view_matrix());
                 //fps(time);
                 window.requestAnimationFrame(animate); // While(True) loop!

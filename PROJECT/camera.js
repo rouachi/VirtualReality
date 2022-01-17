@@ -18,7 +18,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
     // Euler angles
     var yaw = 90.0;
     var pitch = 0.0;
-    var movement_speed = 0.15;
+    var movement_speed = 0.05;
     var mouse_sensitivity = 1.0;
     var zoom = 0.0; // Not used anymore
 
@@ -82,7 +82,7 @@ var make_camera = function(canvas, position, up, yaw, pitch) {
     }
 
     function register_mouse() {
-//*
+///*
             // For the mighty and worthy students that want to make
             // rotations with the mouse, you can find here a starting code.
             function getMousePos(canvas, evt) {
